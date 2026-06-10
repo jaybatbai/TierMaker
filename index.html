@@ -78,7 +78,8 @@
             <div class="board-footer-actions" style="padding: 0 20px 20px 20px; display:flex; gap:12px;">
                 <button onclick="addNewTier()" class="btn-icon" style="flex:1; background: var(--primary); color: white; border: none; font-size: 1rem;"><i class="ph ph-plus-circle"></i> Add Row</button>
                 <button onclick="openSettingsModal()" class="btn-icon" style="flex:1; font-size: 1rem;"><i class="ph ph-gear"></i> Settings</button>
-                <button onclick="resetBoard()" class="btn-icon" style="color:var(--danger); border-color:rgba(239, 68, 68, 0.3); flex:1; font-size: 1rem;"><i class="ph ph-trash"></i> Reset All</button>
+                <button onclick="resetBoard()" class="btn-icon" style="color:var(--warning); border-color:rgba(245, 158, 11, 0.3); background: rgba(245, 158, 11, 0.1); flex:1; font-size: 1rem;" title="Trả ảnh về Dock"><i class="ph ph-arrow-u-down-left"></i> To Dock</button>
+                <button onclick="clearAllImages()" class="btn-icon" style="color:var(--danger); border-color:rgba(239, 68, 68, 0.3); flex:1; font-size: 1rem;" title="Xóa toàn bộ ảnh"><i class="ph ph-trash"></i> Clear Images</button>
             </div>
             
             <div id="dock-container-box" class="dock-container">
@@ -88,6 +89,7 @@
                         <span style="font-weight:800; font-size:1.1rem; color:var(--text-main);">Image Dock (<span id="dock-count">0</span>)</span>
                     </div>
                     <div style="display: flex; gap: 8px;">
+                        <button onclick="clearDock()" style="padding: 8px 12px; border-radius: 20px; border: 1px solid rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.1); color: var(--danger); font-size: 0.85rem; outline: none; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: 0.2s;" title="Xóa toàn bộ ảnh trong Dock"><i class="ph ph-trash"></i> Dock</button>
                         <select id="dock-sort-select" style="padding: 8px 12px; border-radius: 20px; border: 1px solid var(--border-color); background: var(--bg-elevated); color: var(--text-main); font-size: 0.85rem; outline: none; cursor: pointer;" onchange="sortDock(this.value)">
                             <option value="">⇅ Sort By...</option>
                             <option value="newest">🕒 Newest Added</option>
