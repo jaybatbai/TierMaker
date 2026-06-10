@@ -87,7 +87,7 @@ function loadMenu() {
                 }); 
                 container.innerHTML = html; 
             } catch (err) {
-                container.innerHTML = `<div style="text-align:center; color:var(--danger); padding:40px;"><b>Render Error:</b> Data is stuck!<br><br><button onclick="wipeAllData()" style="padding:10px; background:red; color:white; border:none; border-radius:5px;">Reset Data</button></div>`;
+                container.innerHTML = `<div style="text-align:center; color:var(--danger); padding:40px;"><b>Render Error:</b> Data is stuck!<br><br><button onclick="wipeAllDataV2()" style="padding:10px; background:red; color:white; border:none; border-radius:5px;">Reset Data</button></div>`;
             }
         }; 
         req.onerror = e => { container.innerHTML = `<div style="text-align:center; color:var(--danger); padding:40px;"><b>Database Error</b><br>Cannot fetch from storage.</div>`; }
@@ -173,15 +173,12 @@ function deleteSingleList(e, id, name) {
 function openCreateModal() { 
     document.getElementById('create-modal-overlay').style.display='flex'; 
     document.getElementById('new-template-name').focus(); 
-    // Reset lựa chọn về mặc định khi mở modal
     document.getElementById('new-board-type').value = 'story'; 
 }
 
 function confirmCreateList() { 
     const name = document.getElementById('new-template-name').value.trim() || 'New Board'; 
     const presetVal = document.getElementById('new-template-preset').value;
-    
-    // Đọc quyết định của người dùng: Là Tier List thường hay Truyện?
     const boardType = document.getElementById('new-board-type').value;
     const isStoryMode = (boardType === 'story');
     
@@ -223,7 +220,6 @@ function confirmCreateList() {
                     ];
                 }
 
-                // Khởi tạo List với tùy chọn isStoryMode tương ứng
                 const newList = { 
                     id: 'list_'+Date.now(), name: name, tiers: newTiers, dock: [],
                     shape: 'auto', background: null, fontIndex: 0, showFilename: false, scorePrecision: 2,
@@ -240,7 +236,7 @@ function confirmCreateList() {
 function openSettingsModal() { 
     document.getElementById('setting-header-toggle').checked = (currentListData.headerVisible !== false);
     document.getElementById('setting-name-toggle').checked = !!currentListData.showFilename;
-    document.getElementById('setting-story-toggle').checked = !!currentListData.isStoryMode; // Đồng bộ Settings
+    document.getElementById('setting-story-toggle').checked = !!currentListData.isStoryMode;
     document.getElementById('setting-shape-select').value = currentListData.shape || 'auto';
     document.getElementById('setting-font-select').value = currentListData.fontIndex || 0;
     document.getElementById('setting-precision-select').value = currentListData.scorePrecision || 2;
@@ -249,12 +245,10 @@ function openSettingsModal() {
 
 function toggleHeaderSetting(isChecked) { currentListData.headerVisible = isChecked; commitChange(); }
 function toggleFilenameSetting(isChecked) { currentListData.showFilename = isChecked; commitChange(); }
-
-// Công tắc gạt chuyển đổi nếu lỡ người dùng muốn đổi ý sau khi đã tạo list
 function toggleStoryModeSetting(isChecked) { 
     currentListData.isStoryMode = isChecked; 
     commitChange(); 
-    if (selectedImgObj) deselectImg(); // Ẩn menu đi để reload UI mượt mà
+    if (selectedImgObj) deselectImg(); 
 }
 
 function changeImageShapeSetting(val) { currentListData.shape = val; commitChange(); }
@@ -336,4 +330,85 @@ function saveCaption() {
     closeModal('caption-modal-overlay'); 
     deselectImg(); 
     commitChange(); 
+}
+
+// ==========================================
+// BYPASS CACHE: HỆ THỐNG BACKUP V2 MỚI
+// Cụm này sẽ lách qua file files.js cũ kỹ bị lỗi của bạn
+// ==========================================
+function openBackupModalV2() { 
+    document.getElementById('backup-modal-overlay').style.display='flex'; 
+}
+
+function exportDataV2() { 
+    try { 
+        db.transaction(['lists']).objectStore('lists').getAll().onsuccess = e => { 
+            const data = JSON.stringify(e.target.result); 
+            const blob = new Blob([data], {type: "application/json"}); 
+            const url = URL.createObjectURL(blob); 
+            const a = document.createElement('a'); 
+            a.href = url; a.download = `TierMaker_Backup_${Date.now()}.json`; a.click(); 
+            setTimeout(() => URL.revokeObjectURL(url), 1000); 
+        }; 
+    } catch (err) { showToast("Lỗi khi Backup!", true); } 
+}
+
+function importDataV2(e) { 
+    const file = e.target.files[0]; 
+    if (!file) return; 
+    
+    showLoading("Đang đọc và sửa lỗi định dạng file...");
+
+    const reader = new FileReader(); 
+    reader.onload = ev => { 
+        // Delay 1 chút để màn hình loading kịp hiện
+        setTimeout(() => {
+            try { 
+                let data = JSON.parse(ev.target.result); 
+                
+                // Tự động sửa file cấu trúc siêu cũ thành chuẩn mới
+                if (!Array.isArray(data) && typeof data === 'object') data = [data];
+                
+                data = data.map((item, index) => {
+                    if (!item.id) item.id = 'list_imported_' + Date.now() + '_' + index;
+                    if (typeof item.name !== 'string') item.name = item.name ? String(item.name) : 'Old Imported Board';
+                    if (!Array.isArray(item.tiers)) item.tiers = [];
+                    if (!Array.isArray(item.dock)) item.dock = [];
+                    return item;
+                });
+                
+                const tx = db.transaction(['lists'], 'readwrite'); 
+                const store = tx.objectStore('lists'); 
+                
+                data.forEach(item => store.put(item)); 
+                
+                tx.oncomplete = () => { 
+                    hideLoading();
+                    showToast('Nhập dữ liệu thành công!'); 
+                    loadMenu(); 
+                    closeModal('backup-modal-overlay'); 
+                }; 
+                tx.onerror = () => {
+                    hideLoading();
+                    showToast('Lỗi Database!', true);
+                };
+            } catch(err) { 
+                console.error(err);
+                hideLoading();
+                showToast('File hỏng hoặc không phải file Backup chuẩn!', true); 
+            } 
+        }, 150);
+    }; 
+    reader.readAsText(file); 
+    e.target.value = ''; 
+}
+
+function wipeAllDataV2() { 
+    openConfirm("WARNING", "Xóa sạch MỌI THỨ? Dữ liệu không thể khôi phục nếu chưa backup.", () => { 
+        try {
+            db.transaction(['lists'], 'readwrite').objectStore('lists').clear().onsuccess = () => {
+                showToast("Đã dọn sạch database!"); loadMenu(); closeModal('backup-modal-overlay');
+            };
+        } catch (e) { showToast("Lỗi khi xóa dữ liệu!", true); }
+    }); 
 }
