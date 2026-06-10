@@ -314,6 +314,32 @@ function addNewTier() { currentListData.tiers.push({name:'NEW', color:'#1a1a1a',
 function deleteTier() { closeModal('modal-overlay'); openConfirm("Delete Row", "Delete this row? Images in this row (if any) will also be deleted.", () => { currentListData.tiers.splice(editingTierIndex, 1); commitChange(); }); }
 function resetBoard() { openConfirm("Reset", "Return all images to the Dock?", () => { currentListData.tiers.forEach(t => { currentListData.dock.push(...t.items); t.items = []; }); commitChange(); }); }
 
+function clearAllImages() {
+    openConfirm("Clear All Images", "Xóa toàn bộ ảnh trên bảng và trong Dock? Hành động này không thể hoàn tác!", () => {
+        currentListData.dock = [];
+        currentListData.tiers.forEach(t => t.items = []);
+        
+        if (typeof deselectImg === 'function') deselectImg();
+        if (isMultiSelectMode) { multiSelectImages = []; if(typeof updateBulkUI==='function') updateBulkUI(); }
+        
+        commitChange();
+        showToast("Đã dọn sạch toàn bộ ảnh!");
+    });
+}
+
+// Xóa riêng Dock
+function clearDock() {
+    openConfirm("Clear Dock", "Xóa toàn bộ ảnh đang chờ trong Dock? Hành động này không thể hoàn tác!", () => {
+        currentListData.dock = [];
+        
+        if (typeof deselectImg === 'function') deselectImg();
+        if (isMultiSelectMode) { multiSelectImages = []; if(typeof updateBulkUI==='function') updateBulkUI(); }
+        
+        commitChange();
+        showToast("Đã dọn sạch ảnh trong Dock!");
+    });
+}
+
 function openCaptionModal() { 
     if (selectedImgObj) { 
         document.getElementById('caption-input').value = selectedImgObj.data.caption || ''; 
