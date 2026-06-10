@@ -43,7 +43,7 @@
             <div class="menu-actions">
                 <button class="btn-create" onclick="openCreateModal()"><i class="ph ph-plus"></i> Create New Template</button>
                 <button class="btn-sync" onclick="openSyncModal()"><i class="ph ph-rocket"></i> P2P Sync (AirDrop) - Fast</button>
-                <button class="btn-data" onclick="openBackupMenu()"><i class="ph ph-archive"></i> Files & Local Backup</button>
+                <button class="btn-data" onclick="openBackupModalV2()"><i class="ph ph-archive"></i> Files & Local Backup</button>
             </div>
             <div id="list-container" role="list">Loading...</div>
         </div>
@@ -419,14 +419,14 @@
             <h2>Files & Backup</h2>
             <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 15px;">Dự phòng (backup) toàn bộ dữ liệu ra file JSON để lưu trữ hoặc chuyển qua trình duyệt khác.</p>
             <div class="modal-btns">
-                <button onclick="exportData()" style="background: var(--accent); color: white;"><i class="ph ph-export"></i> Export All Data (JSON)</button>
+                <button onclick="exportDataV2()" style="background: var(--accent); color: white;"><i class="ph ph-export"></i> Export All Data (JSON)</button>
                 
-                <button onclick="document.getElementById('import-file').click()" style="background: var(--primary); color: white;"><i class="ph ph-download-simple"></i> Import Data</button>
-                <input type="file" id="import-file" accept=".json" style="display: none;" onchange="importData(event)">
+                <button onclick="document.getElementById('import-file-v2').click()" style="background: var(--primary); color: white;"><i class="ph ph-download-simple"></i> Import Data</button>
+                <input type="file" id="import-file-v2" accept=".json" style="display: none;" onchange="importDataV2(event)">
                 
                 <div style="height: 1px; background: var(--border-color); margin: 10px 0;"></div>
                 
-                <button onclick="wipeAllData()" style="background: rgba(239, 68, 68, 0.1); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.3);"><i class="ph ph-warning-octagon"></i> Wipe All Data</button>
+                <button onclick="wipeAllDataV2()" style="background: rgba(239, 68, 68, 0.1); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.3);"><i class="ph ph-warning-octagon"></i> Wipe All Data</button>
                 <button onclick="closeModal('backup-modal-overlay')" style="background: var(--bg-surface); border: 1px solid var(--border-color); color: var(--text-main);">Close</button>
             </div>
         </div>
