@@ -43,28 +43,22 @@ function getStatusIcon(status) {
     return '';
 }
 
-// Hàm này sẽ áp dụng các thay đổi về giao diện tùy thuộc vào chế độ (Story vs Normal)
 function applyStoryModeUI() {
     const isStory = !!currentListData.isStoryMode;
     
-    // Top bar: Ẩn/hiện nút bật tắt Status
     const topStatusBtn = document.getElementById('btn-status-toggle');
     if(topStatusBtn) topStatusBtn.style.display = isStory ? 'flex' : 'none';
     
-    // Floating Toolbar: Ẩn/hiện Chọn Trạng thái và Ô nhập Chap
     const floatStatus = document.getElementById('float-status');
     if(floatStatus) floatStatus.style.display = isStory ? 'inline-block' : 'none';
     const floatChapWrap = document.getElementById('float-chapter-wrap');
     
-    // Float More Menu: Ẩn/hiện cột Tra Cứu (Manga/Anime)
     const searchCol = document.getElementById('menu-col-search');
     if(searchCol) searchCol.style.display = isStory ? 'flex' : 'none';
     
-    // Bulk Menu: Ẩn/hiện Đổi trạng thái hàng loạt
     const bulkStatus = document.getElementById('bulk-status-select');
     if(bulkStatus) bulkStatus.style.display = isStory ? 'inline-block' : 'none';
     
-    // Nếu chuyển về Normal Mode, mặc định tự tắt giao diện Status Mode trên toàn trang
     if(!isStory && isShowStatusMode) toggleStatusMode();
 }
 
@@ -72,7 +66,6 @@ function renderBoard() {
     if (selectedImgObj) deselectImg(); 
 
     try {
-        // Cập nhật giao diện tùy chọn theo Loại Board trước khi render
         applyStoryModeUI();
 
         if(currentListData.showFilename) { document.body.classList.add('show-filename-on-click'); } 
@@ -201,7 +194,7 @@ function renderBoard() {
                         lastDroppedData = draggedItem.data; setTimeout(() => lastDroppedData = null, 500);
                         commitChange(); 
                     } 
-                } catch(err) { if(typeof showToast === 'function') showToast("Lỗi thả vào hàng Tier", true); console.error(err); }
+                } catch(err) { if(typeof showToast === 'function') showToast("Error dropping into tier", true); console.error(err); }
             };
             
             t.items.forEach((img, idx) => content.appendChild(createImg(img, 'tier', i, idx)));
@@ -247,19 +240,20 @@ function renderBoard() {
 
                     commitChange(); 
                 } 
-            } catch(err) { if(typeof showToast === 'function') showToast("Lỗi thả Dock", true); console.error(err); }
+            } catch(err) { if(typeof showToast === 'function') showToast("Error dropping into dock", true); console.error(err); }
         };
         
         currentListData.dock.forEach((img, idx) => dock.appendChild(createImg(img, 'dock', null, idx)));
         if (typeof filterDock === 'function') filterDock();
-    } catch (err) { if(typeof showToast === 'function') showToast("Lỗi Render Giao Diện", true); console.error(err); }
+    } catch (err) { if(typeof showToast === 'function') showToast("UI Render Error", true); console.error(err); }
 }
 
 function refreshFloatImageTitle() {
     const titleEl = document.getElementById('float-image-title');
     if (titleEl && selectedImgObj) {
         if (currentListData.showFilename) {
-            let rName = selectedImgObj.data.name || 'Chưa có tên';
+            let rName = selectedImgObj.data.name || 'Untitled';
+            let altName = selectedImgObj.data.altName ? ` <span style="color:var(--text-muted); font-size: 0.85em; font-weight: normal;">(${escapeHTML(selectedImgObj.data.altName)})</span>` : '';
             let p = currentListData.scorePrecision || 2;
             let sStr = selectedImgObj.data.score !== undefined ? selectedImgObj.data.score.toFixed(p) : '-';
             
@@ -267,7 +261,7 @@ function refreshFloatImageTitle() {
                 ? `&nbsp;&nbsp;<i class="ph-bold ph-bookmark-simple"></i> ${selectedImgObj.data.chapter}` 
                 : '';
                 
-            titleEl.innerHTML = `${escapeHTML(rName)} <span style="color:var(--warning); margin-left: 8px;"><i class="ph-fill ph-star"></i> ${sStr}</span><span style="color:var(--accent)">${cStr}</span>`;
+            titleEl.innerHTML = `${escapeHTML(rName)}${altName} <span style="color:var(--warning); margin-left: 8px;"><i class="ph-fill ph-star"></i> ${sStr}</span><span style="color:var(--accent)">${cStr}</span>`;
             titleEl.style.opacity = '1';
         } else {
             titleEl.style.opacity = '0';
@@ -278,24 +272,26 @@ function refreshFloatImageTitle() {
 function createImg(data, type, r, i) {
     const wrap = document.createElement('div'); wrap.className = 'img-wrap'; 
     wrap.style.height = (type==='tier' ? data.h : 85) + 'px';
-    wrap.dataset.name = (data.name || '').toLowerCase();
     
-    if (data.locked) wrap.setAttribute('data-locked', 'true');
-    // Chỉ set status nếu đang ở Story Mode
-    if(currentListData.isStoryMode) {
-        wrap.setAttribute('data-status', data.readStatus || 'none');
-    }
-
     let rawName = data.name || '';
     if (/\.(png|jpe?g|webp|gif|svg)$/i.test(rawName)) rawName = rawName.replace(/\.[^/.]+$/, "");
     wrap.setAttribute('data-raw-name', rawName);
+    
+    let altStrForSearch = data.altName ? ` ${data.altName}` : '';
+    wrap.dataset.name = (rawName + altStrForSearch).toLowerCase();
+    
+    if (data.locked) wrap.setAttribute('data-locked', 'true');
+    if(currentListData.isStoryMode) {
+        wrap.setAttribute('data-status', data.readStatus || 'none');
+    }
     
     let p = currentListData.scorePrecision || 2;
     let scoreStr = data.score !== undefined ? data.score.toFixed(p) : '-';
     wrap.setAttribute('data-score', scoreStr);
 
     let chapterStr = (data.chapter && currentListData.isStoryMode) ? `\n🔖 Chap: ${data.chapter}` : '';
-    let tooltipName = rawName ? rawName : "Chưa có tên";
+    let tooltipName = rawName ? rawName : "Untitled";
+    if (data.altName) tooltipName += ` (${data.altName})`; 
     wrap.setAttribute('data-name-tooltip', `${tooltipName}\n⭐ ${scoreStr}${chapterStr}`); 
     
     if(isDragMode) wrap.draggable = true; else wrap.style.cursor = 'pointer';
@@ -303,7 +299,6 @@ function createImg(data, type, r, i) {
     const img = document.createElement('img'); img.src = data.src; img.className = 'img-item'; 
     wrap.appendChild(img);
 
-    // Chỉ kết xuất Huy hiệu Status nếu là Story Mode
     if(currentListData.isStoryMode) {
         const statusBadge = document.createElement('div');
         statusBadge.className = 'status-badge';
@@ -347,12 +342,21 @@ function createImg(data, type, r, i) {
         
         if (isNameCopyMode) {
             let nameToCopy = wrap.getAttribute('data-raw-name') || '';
-            if (nameToCopy) {
-                navigator.clipboard.writeText(nameToCopy).then(() => {
-                    if(typeof showToast === 'function') showToast(`Đã copy: ${nameToCopy}`);
-                }).catch(() => { if(typeof showToast === 'function') showToast("Không thể copy!", true); });
-            } else { if(typeof showToast === 'function') showToast("Ảnh này chưa có tên!", true); }
+            let altNameToCopy = data.altName || '';
+            
+            let finalCopy = nameToCopy;
+            if (currentListData.copyIncludesAlt !== false && altNameToCopy) {
+                finalCopy = `${nameToCopy} (${altNameToCopy})`;
+            }
+
+            if (finalCopy) {
+                navigator.clipboard.writeText(finalCopy).then(() => {
+                    if(typeof showToast === 'function') showToast(`Copied: ${finalCopy}`);
+                }).catch(() => { if(typeof showToast === 'function') showToast("Failed to copy!", true); });
+            } else { if(typeof showToast === 'function') showToast("Image has no name!", true); }
+            
             if (selectedImgObj && selectedImgObj.dom !== wrap && typeof deselectImg === 'function') deselectImg();
+            return;
         }
         
         if (isLockScoreMode) {
@@ -384,7 +388,6 @@ function createImg(data, type, r, i) {
             document.getElementById('float-size-val').innerText = data.h + 'px'; 
             document.getElementById('float-status').value = data.readStatus || 'none';
             
-            // XỬ LÝ ẨN/HIỆN Ô NHẬP CHAP TRÊN TOOLBAR
             const chapterWrap = document.getElementById('float-chapter-wrap');
             if (chapterWrap) {
                 if (currentListData.isStoryMode) {
@@ -479,7 +482,7 @@ function initKeyboardShortcuts() {
         if (e.ctrlKey || e.metaKey) { 
             if (e.key.toLowerCase() === 'z') { e.preventDefault(); if (!document.getElementById('editor-screen').classList.contains('hidden')) { undo(); } else { if(typeof undoMenuAction === 'function') undoMenuAction(); } } 
             if (e.key.toLowerCase() === 'y') { e.preventDefault(); if (!document.getElementById('editor-screen').classList.contains('hidden')) redo(); } 
-            if (e.key.toLowerCase() === 's') { e.preventDefault(); if (currentListData) { saveListSilent(currentListData); if(typeof showToast==='function') showToast('Đã lưu thủ công'); isDirty = false; } } 
+            if (e.key.toLowerCase() === 's') { e.preventDefault(); if (currentListData) { saveListSilent(currentListData); if(typeof showToast==='function') showToast('Saved manually!'); isDirty = false; } } 
         } 
         if (e.key === 'Delete' || e.key === 'Backspace') { if (selectedImgObj) { e.preventDefault(); deleteSelected(); } } 
         if (e.key === 'Escape') { 
@@ -538,7 +541,7 @@ function toggleNameCopyMode() {
         btn.className = 'btn-icon active';
         btn.style.background = 'rgba(59, 130, 246, 0.1)'; btn.style.color = 'var(--accent)'; btn.style.borderColor = 'rgba(59, 130, 246, 0.3)';
         document.body.classList.add('name-copy-mode'); if(typeof deselectImg==='function') deselectImg(); 
-        if(typeof showToast==='function') showToast("Click vào ảnh để Copy tên!");
+        if(typeof showToast==='function') showToast("Click on an image to copy its name!");
     } else {
         btn.innerHTML = '<i class="ph ph-text-t"></i> Name: OFF';
         btn.className = 'btn-icon';
@@ -694,12 +697,12 @@ function bulkChangeStatus(val) {
     if (multiSelectImages.length === 0 || !val) return;
     multiSelectImages.forEach(obj => { obj.data.readStatus = val === 'none' ? 'none' : val; });
     commitChangeSilent(); renderBoard(); 
-    if(typeof showToast==='function') showToast("Cập nhật trạng thái hàng loạt thành công!");
+    if(typeof showToast==='function') showToast("Bulk status updated!");
     document.getElementById('bulk-status-select').value = ''; 
 }
 
 // ==========================================
-// FLOATING TOOLBAR & DATA ACTIONS
+// FLOATING TOOLBAR & DATA ACTIONS (VỊ TRÍ THÔNG MINH MỚI)
 // ==========================================
 function updateFloatingToolbarPosition(wrap) {
     const tb = document.getElementById('floating-toolbar');
@@ -707,12 +710,20 @@ function updateFloatingToolbarPosition(wrap) {
     let tbHeight = tb.offsetHeight || 52;
     let tbWidth = tb.offsetWidth || 300;
     
-    let topPos = rect.top - tbHeight - 15; 
+    // MẶC ĐỊNH MỚI: Thanh công cụ nằm ở DƯỚI bức ảnh
+    let topPos = rect.bottom + 15; 
     let isFlipped = false;
     
-    if (topPos < 80) { 
-        topPos = rect.bottom + 15; 
+    // Nếu khoảng trống bên dưới lố mép màn hình, lật lên TRÊN
+    if (topPos + tbHeight + 150 > window.innerHeight) { 
+        topPos = rect.top - tbHeight - 15; 
         isFlipped = true; 
+    }
+    
+    // CHỐNG CHE TOP BAR: Nếu lật lên trên mà lại đè mất thanh công cụ trên cùng (top < 80px)
+    // -> Ép nó hiển thị chèn ngang giữa bức ảnh luôn cho chắc cốp.
+    if (isFlipped && topPos < 80) {
+        topPos = rect.top + (rect.height / 2) - (tbHeight / 2);
     }
     
     let leftPos = rect.left + (rect.width / 2);
@@ -720,15 +731,19 @@ function updateFloatingToolbarPosition(wrap) {
     if (leftPos - (tbWidth / 2) < safePadding) leftPos = (tbWidth / 2) + safePadding;
     if (leftPos + (tbWidth / 2) > window.innerWidth - safePadding) leftPos = window.innerWidth - (tbWidth / 2) - safePadding;
 
-    tb.style.top = topPos + 'px'; tb.style.left = leftPos + 'px';
+    tb.style.top = topPos + 'px'; 
+    tb.style.left = leftPos + 'px';
     
     const titleEl = document.getElementById('float-image-title');
-    if (isFlipped) { 
+    
+    // Nếu thanh nằm DƯỚI ảnh (default) -> Menu Dropdown đổ XUỐNG, Tên ảnh nằm TRÊN thanh
+    if (!isFlipped) { 
         tb.classList.add('menu-down'); 
-        if(titleEl) { titleEl.style.top = 'auto'; titleEl.style.bottom = '-40px'; }
-    } else { 
-        tb.classList.remove('menu-down'); 
         if(titleEl) { titleEl.style.bottom = 'auto'; titleEl.style.top = '-40px'; }
+    } else { 
+        // Nếu thanh bị lật LÊN trên ảnh -> Menu Dropdown hất LÊN, Tên ảnh lùi XUỐNG đáy thanh
+        tb.classList.remove('menu-down'); 
+        if(titleEl) { titleEl.style.top = 'auto'; titleEl.style.bottom = '-40px'; }
     }
 }
 
@@ -778,48 +793,70 @@ function downloadSelectedImage() {
 function openRenameModal() {
     if (!selectedImgObj) return;
     document.getElementById('rename-input').value = selectedImgObj.dom.getAttribute('data-raw-name') || '';
+    document.getElementById('rename-input-alt').value = selectedImgObj.data.altName || '';
     document.getElementById('rename-modal-overlay').style.display='flex';
-    document.getElementById('rename-input').focus(); toggleFloatMore();
+    document.getElementById('rename-input').focus(); 
+    if(typeof toggleFloatMore === 'function') toggleFloatMore();
 }
 
 function saveRename() {
     if (!selectedImgObj) return;
     let newName = document.getElementById('rename-input').value.trim();
+    let newAltName = document.getElementById('rename-input-alt').value.trim();
+    
     selectedImgObj.data.name = newName; 
+    selectedImgObj.data.altName = newAltName; 
     
     selectedImgObj.dom.setAttribute('data-raw-name', newName);
-    selectedImgObj.dom.dataset.name = newName.toLowerCase();
+    selectedImgObj.dom.dataset.name = (newName + " " + newAltName).toLowerCase();
     
     let scoreStr = selectedImgObj.dom.getAttribute('data-score') || '-';
     let chapterStr = (selectedImgObj.data.chapter && currentListData.isStoryMode) ? `\n🔖 Chap: ${selectedImgObj.data.chapter}` : '';
-    let tooltipName = newName ? newName : "Chưa có tên";
+    let tooltipName = newName ? newName : "Untitled";
+    if (newAltName) tooltipName += ` (${newAltName})`;
+    
     selectedImgObj.dom.setAttribute('data-name-tooltip', `${tooltipName}\n⭐ ${scoreStr}${chapterStr}`);
 
+    if(typeof refreshFloatImageTitle === 'function') refreshFloatImageTitle();
+
     if(typeof closeModal==='function') closeModal('rename-modal-overlay'); 
-    deselectImg(); commitChange(); 
-    if(typeof showToast==='function') showToast("Đã lưu tên!");
+    if(typeof deselectImg === 'function') deselectImg(); 
+    commitChange(); 
+    if(typeof showToast==='function') showToast("Name saved!");
 }
 
 async function copyImageName() {
     if (!selectedImgObj) return;
     let currentRawName = selectedImgObj.dom.getAttribute('data-raw-name') || '';
-    if (!currentRawName) { if(typeof showToast==='function') showToast("Image has no name!", true); return; }
-    try { await navigator.clipboard.writeText(currentRawName); if(typeof showToast==='function') showToast("Name copied!"); } 
+    let altName = selectedImgObj.data.altName || '';
+    
+    let finalCopy = currentRawName;
+    if (currentListData.copyIncludesAlt !== false && altName) {
+        finalCopy = `${currentRawName} (${altName})`;
+    }
+
+    if (!finalCopy) { if(typeof showToast==='function') showToast("Image has no name!", true); return; }
+    try { await navigator.clipboard.writeText(finalCopy); if(typeof showToast==='function') showToast("Name copied!"); } 
     catch (err) { if(typeof showToast==='function') showToast("Failed to copy!", true); }
 }
 
 function clearImageName() { 
     if (!selectedImgObj) return; 
     selectedImgObj.data.name = ""; 
+    selectedImgObj.data.altName = "";
     
     selectedImgObj.dom.setAttribute('data-raw-name', "");
     selectedImgObj.dom.dataset.name = "";
+    
     let scoreStr = selectedImgObj.dom.getAttribute('data-score') || '-';
     let chapterStr = (selectedImgObj.data.chapter && currentListData.isStoryMode) ? `\n🔖 Chap: ${selectedImgObj.data.chapter}` : '';
-    selectedImgObj.dom.setAttribute('data-name-tooltip', `Chưa có tên\n⭐ ${scoreStr}${chapterStr}`);
+    selectedImgObj.dom.setAttribute('data-name-tooltip', `Untitled\n⭐ ${scoreStr}${chapterStr}`);
 
-    deselectImg(); commitChange(); 
-    if(typeof showToast==='function') showToast("Đã xóa tên!"); 
+    if(typeof refreshFloatImageTitle === 'function') refreshFloatImageTitle();
+
+    if(typeof deselectImg === 'function') deselectImg(); 
+    commitChange(); 
+    if(typeof showToast==='function') showToast("Name cleared!"); 
 }
 
 function changeReadStatus(val) { 
@@ -838,7 +875,9 @@ function applyChapter(val) {
     selectedImgObj.data.chapter = val.trim();
     
     let rawName = selectedImgObj.dom.getAttribute('data-raw-name') || '';
-    let tooltipName = rawName ? rawName : "Chưa có tên";
+    let tooltipName = rawName ? rawName : "Untitled";
+    if (selectedImgObj.data.altName) tooltipName += ` (${selectedImgObj.data.altName})`;
+
     let scoreStr = selectedImgObj.dom.getAttribute('data-score') || '-';
     let chapterStr = (selectedImgObj.data.chapter && currentListData.isStoryMode) ? `\n🔖 Chap: ${selectedImgObj.data.chapter}` : '';
     selectedImgObj.dom.setAttribute('data-name-tooltip', `${tooltipName}\n⭐ ${scoreStr}${chapterStr}`);
@@ -871,10 +910,10 @@ function updateSearchTypeUI() {
     const btn = document.getElementById('btn-search-type');
     if (!btn) return;
     if (searchType === 'manga') {
-        btn.innerHTML = '<i class="ph ph-book-open"></i> Đang tìm: Manga';
+        btn.innerHTML = '<i class="ph ph-book-open"></i> Search: Manga';
         btn.style.color = 'var(--accent)';
     } else {
-        btn.innerHTML = '<i class="ph ph-television"></i> Đang tìm: Anime';
+        btn.innerHTML = '<i class="ph ph-television"></i> Search: Anime';
         btn.style.color = 'var(--warning)';
     }
 }
@@ -889,7 +928,7 @@ function toggleSearchType(e) {
 function searchAnime(site) {
     if (!selectedImgObj) return;
     let currentRawName = selectedImgObj.dom.getAttribute('data-raw-name') || '';
-    if (!currentRawName) { if(typeof showToast==='function') showToast("Chưa có tên để tra cứu!", true); return; }
+    if (!currentRawName) { if(typeof showToast==='function') showToast("No name to search!", true); return; }
     
     const q = encodeURIComponent(currentRawName);
     let url = '';
@@ -935,7 +974,7 @@ function applyScoreMove(score) {
     let targetIndex = getTierIndexByScore(parsedScore);
     
     if (targetIndex === -1) {
-        if(typeof showToast === 'function') showToast("Bảng chưa có hàng (Tier) nào để nhận điểm!", true);
+        if(typeof showToast === 'function') showToast("No tiers available to receive score!", true);
         return;
     }
 
@@ -947,7 +986,7 @@ function applyScoreMove(score) {
     currentListData.tiers[targetIndex].items.push(selectedImgObj.data);
     currentListData.tiers[targetIndex].items.sort((a, b) => (b.score !== undefined ? b.score : -1) - (a.score !== undefined ? a.score : -1));
 
-    if(typeof showToast === 'function') showToast(`Đã chuyển tới ${currentListData.tiers[targetIndex].name}`); 
+    if(typeof showToast === 'function') showToast(`Moved to ${currentListData.tiers[targetIndex].name}`); 
     deselectImg(); commitChange(); 
 }
 
