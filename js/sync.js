@@ -117,3 +117,4 @@ function receiveSyncData() {
     });
     peer.on('error', (err) => { hideLoading(); alert("Connection failed. Make sure the Host is waiting on the PIN screen."); });
 }
+
