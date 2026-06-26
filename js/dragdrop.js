@@ -135,3 +135,4 @@ function initGlobalFileDrop() {
         } 
     }, true); 
 }
+
