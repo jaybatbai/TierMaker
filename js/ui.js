@@ -110,7 +110,7 @@ function openList(id) {
         }; 
     } catch (err) { 
         hideLoading(); 
-        showToast("Lỗi khi mở Tier List!", true);
+        showToast("Error opening Tier List!", true);
     } 
 }
 
@@ -126,7 +126,7 @@ async function backToMenu() {
         currentListData.thumbnail = canvas.toDataURL('image/jpeg', 0.6); 
         saveListSilent(currentListData); 
     } catch (err) {
-        showToast("Lưu thumbnail bị lỗi, nhưng dữ liệu vẫn an toàn.", true);
+        showToast("Thumbnail save error, but data is safe.", true);
     } finally { 
         currentListData = null; selectedImgObj = null; isMultiSelectMode = false; multiSelectImages = []; 
         document.getElementById('bulk-action-bar').classList.remove('show'); 
@@ -186,7 +186,7 @@ function confirmCreateList() {
         db.transaction(['lists']).objectStore('lists').getAll().onsuccess = e => { 
             const list = e.target.result; 
             if (list.some(l => l.name.toLowerCase() === name.toLowerCase())) { 
-                showToast('Tên Board đã tồn tại!', true); 
+                showToast('Board name already exists!', true); 
                 return; 
             } 
             showLoading("Creating..."); 
@@ -223,7 +223,7 @@ function confirmCreateList() {
                 const newList = { 
                     id: 'list_'+Date.now(), name: name, tiers: newTiers, dock: [],
                     shape: 'auto', background: null, fontIndex: 0, showFilename: false, scorePrecision: 2,
-                    isStoryMode: isStoryMode 
+                    isStoryMode: isStoryMode, copyIncludesAlt: true 
                 }; 
                 saveListSilent(newList); 
                 pushMenuAction({type: 'CREATE', id: newList.id});
@@ -237,6 +237,7 @@ function openSettingsModal() {
     document.getElementById('setting-header-toggle').checked = (currentListData.headerVisible !== false);
     document.getElementById('setting-name-toggle').checked = !!currentListData.showFilename;
     document.getElementById('setting-story-toggle').checked = !!currentListData.isStoryMode;
+    document.getElementById('setting-copy-alt-toggle').checked = (currentListData.copyIncludesAlt !== false);
     document.getElementById('setting-shape-select').value = currentListData.shape || 'auto';
     document.getElementById('setting-font-select').value = currentListData.fontIndex || 0;
     document.getElementById('setting-precision-select').value = currentListData.scorePrecision || 2;
@@ -245,6 +246,7 @@ function openSettingsModal() {
 
 function toggleHeaderSetting(isChecked) { currentListData.headerVisible = isChecked; commitChange(); }
 function toggleFilenameSetting(isChecked) { currentListData.showFilename = isChecked; commitChange(); }
+function toggleCopyAltSetting(isChecked) { currentListData.copyIncludesAlt = isChecked; commitChangeSilent(); }
 function toggleStoryModeSetting(isChecked) { 
     currentListData.isStoryMode = isChecked; 
     commitChange(); 
@@ -312,10 +314,10 @@ function moveTierUp() { if (editingTierIndex > 0) { const tmp = currentListData.
 function moveTierDown() { if (editingTierIndex < currentListData.tiers.length - 1) { const tmp = currentListData.tiers[editingTierIndex]; currentListData.tiers[editingTierIndex] = currentListData.tiers[editingTierIndex + 1]; currentListData.tiers[editingTierIndex + 1] = tmp; editingTierIndex++; commitChange(); } }
 function addNewTier() { currentListData.tiers.push({name:'NEW', color:'#1a1a1a', items:[], minScore: 0, maxScore: 0}); commitChange(); }
 function deleteTier() { closeModal('modal-overlay'); openConfirm("Delete Row", "Delete this row? Images in this row (if any) will also be deleted.", () => { currentListData.tiers.splice(editingTierIndex, 1); commitChange(); }); }
-function resetBoard() { openConfirm("Reset", "Return all images to the Dock?", () => { currentListData.tiers.forEach(t => { currentListData.dock.push(...t.items); t.items = []; }); commitChange(); }); }
+function resetBoard() { openConfirm("Return to Dock", "Return all images on the board to the Dock?", () => { currentListData.tiers.forEach(t => { currentListData.dock.push(...t.items); t.items = []; }); commitChange(); }); }
 
 function clearAllImages() {
-    openConfirm("Clear All Images", "Xóa toàn bộ ảnh trên bảng và trong Dock? Hành động này không thể hoàn tác!", () => {
+    openConfirm("Clear All Images", "Delete all images from the board and Dock? This cannot be undone!", () => {
         currentListData.dock = [];
         currentListData.tiers.forEach(t => t.items = []);
         
@@ -323,20 +325,19 @@ function clearAllImages() {
         if (isMultiSelectMode) { multiSelectImages = []; if(typeof updateBulkUI==='function') updateBulkUI(); }
         
         commitChange();
-        showToast("Đã dọn sạch toàn bộ ảnh!");
+        showToast("All images cleared!");
     });
 }
 
-// Xóa riêng Dock
 function clearDock() {
-    openConfirm("Clear Dock", "Xóa toàn bộ ảnh đang chờ trong Dock? Hành động này không thể hoàn tác!", () => {
+    openConfirm("Clear Dock", "Delete all images waiting in the Dock? This cannot be undone!", () => {
         currentListData.dock = [];
         
         if (typeof deselectImg === 'function') deselectImg();
         if (isMultiSelectMode) { multiSelectImages = []; if(typeof updateBulkUI==='function') updateBulkUI(); }
         
         commitChange();
-        showToast("Đã dọn sạch ảnh trong Dock!");
+        showToast("Dock cleared!");
     });
 }
 
@@ -360,7 +361,6 @@ function saveCaption() {
 
 // ==========================================
 // BYPASS CACHE: HỆ THỐNG BACKUP V2 MỚI
-// Cụm này sẽ lách qua file files.js cũ kỹ bị lỗi của bạn
 // ==========================================
 function openBackupModalV2() { 
     document.getElementById('backup-modal-overlay').style.display='flex'; 
@@ -376,23 +376,21 @@ function exportDataV2() {
             a.href = url; a.download = `TierMaker_Backup_${Date.now()}.json`; a.click(); 
             setTimeout(() => URL.revokeObjectURL(url), 1000); 
         }; 
-    } catch (err) { showToast("Lỗi khi Backup!", true); } 
+    } catch (err) { showToast("Backup error!", true); } 
 }
 
 function importDataV2(e) { 
     const file = e.target.files[0]; 
     if (!file) return; 
     
-    showLoading("Đang đọc và sửa lỗi định dạng file...");
+    showLoading("Reading and fixing file format...");
 
     const reader = new FileReader(); 
     reader.onload = ev => { 
-        // Delay 1 chút để màn hình loading kịp hiện
         setTimeout(() => {
             try { 
                 let data = JSON.parse(ev.target.result); 
                 
-                // Tự động sửa file cấu trúc siêu cũ thành chuẩn mới
                 if (!Array.isArray(data) && typeof data === 'object') data = [data];
                 
                 data = data.map((item, index) => {
@@ -410,18 +408,18 @@ function importDataV2(e) {
                 
                 tx.oncomplete = () => { 
                     hideLoading();
-                    showToast('Nhập dữ liệu thành công!'); 
+                    showToast('Data imported successfully!'); 
                     loadMenu(); 
                     closeModal('backup-modal-overlay'); 
                 }; 
                 tx.onerror = () => {
                     hideLoading();
-                    showToast('Lỗi Database!', true);
+                    showToast('Database Error!', true);
                 };
             } catch(err) { 
                 console.error(err);
                 hideLoading();
-                showToast('File hỏng hoặc không phải file Backup chuẩn!', true); 
+                showToast('File is corrupted or invalid!', true); 
             } 
         }, 150);
     }; 
@@ -430,11 +428,11 @@ function importDataV2(e) {
 }
 
 function wipeAllDataV2() { 
-    openConfirm("WARNING", "Xóa sạch MỌI THỨ? Dữ liệu không thể khôi phục nếu chưa backup.", () => { 
+    openConfirm("WARNING", "Wipe ALL data? Unrecoverable without backup.", () => { 
         try {
             db.transaction(['lists'], 'readwrite').objectStore('lists').clear().onsuccess = () => {
-                showToast("Đã dọn sạch database!"); loadMenu(); closeModal('backup-modal-overlay');
+                showToast("Database wiped clean!"); loadMenu(); closeModal('backup-modal-overlay');
             };
-        } catch (e) { showToast("Lỗi khi xóa dữ liệu!", true); }
+        } catch (e) { showToast("Error wiping data!", true); }
     }); 
 }
