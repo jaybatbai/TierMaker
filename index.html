@@ -20,7 +20,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.2/peerjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style.css?v=4">
 </head>
 <body>
     <div id="drop-overlay">Drop Images Here</div>
@@ -56,11 +56,11 @@
                 <span id="save-status" class="save-status-indicator"></span>
 
                 <div class="top-actions">
-                    <button id="btn-name-copy" class="btn-icon" onclick="toggleNameCopyMode()" title="Hiện tên và Copy nhanh"><i class="ph ph-text-t"></i> Name: OFF</button>
-                    <button id="btn-score-toggle" class="btn-icon active" onclick="toggleScoreMode()" title="Ẩn/Hiện Điểm" style="background: rgba(245, 158, 11, 0.1); color: var(--warning); border-color: rgba(245, 158, 11, 0.3);"><i class="ph ph-star"></i> Score: ON</button>
-                    <button id="btn-status-toggle" class="btn-icon" onclick="toggleStatusMode()" title="Ẩn/Hiện Icon Trạng Thái"><i class="ph ph-bookmark"></i> Status: OFF</button>
-                    <button id="btn-lock-score" class="btn-icon" onclick="toggleLockScoreMode()" title="Khóa điểm ảnh"><i class="ph ph-lock-key-open"></i> Lock: OFF</button>
-                    <button id="btn-multi-select" class="btn-icon" onclick="toggleMultiSelectMode()" title="Chế độ chọn nhiều ảnh"><i class="ph ph-check-square"></i> Select: OFF</button>
+                    <button id="btn-name-copy" class="btn-icon" onclick="toggleNameCopyMode()" title="Show names and click to copy"><i class="ph ph-text-t"></i> Name: OFF</button>
+                    <button id="btn-score-toggle" class="btn-icon active" onclick="toggleScoreMode()" title="Toggle Score Badge" style="background: rgba(245, 158, 11, 0.1); color: var(--warning); border-color: rgba(245, 158, 11, 0.3);"><i class="ph ph-star"></i> Score: ON</button>
+                    <button id="btn-status-toggle" class="btn-icon" onclick="toggleStatusMode()" title="Toggle Status Icon"><i class="ph ph-bookmark"></i> Status: OFF</button>
+                    <button id="btn-lock-score" class="btn-icon" onclick="toggleLockScoreMode()" title="Lock Image Scores"><i class="ph ph-lock-key-open"></i> Lock: OFF</button>
+                    <button id="btn-multi-select" class="btn-icon" onclick="toggleMultiSelectMode()" title="Multi-select Mode"><i class="ph ph-check-square"></i> Select: OFF</button>
                     <button id="btn-drag-toggle" class="btn-icon active" onclick="toggleDragMode()" title="Toggle Drag/Scroll Mode"><i class="ph ph-hand-grabbing"></i> Drag: ON</button>
                     <button class="btn-icon" onclick="openHelpModal()" aria-label="Shortcuts" title="Shortcuts"><i class="ph ph-keyboard"></i></button>
                     <button class="btn-icon" onclick="undo()" aria-label="Undo" title="Undo (Ctrl+Z)"><i class="ph ph-arrow-u-up-left"></i></button>
@@ -78,8 +78,8 @@
             <div class="board-footer-actions" style="padding: 0 20px 20px 20px; display:flex; gap:12px;">
                 <button onclick="addNewTier()" class="btn-icon" style="flex:1; background: var(--primary); color: white; border: none; font-size: 1rem;"><i class="ph ph-plus-circle"></i> Add Row</button>
                 <button onclick="openSettingsModal()" class="btn-icon" style="flex:1; font-size: 1rem;"><i class="ph ph-gear"></i> Settings</button>
-                <button onclick="resetBoard()" class="btn-icon" style="color:var(--warning); border-color:rgba(245, 158, 11, 0.3); background: rgba(245, 158, 11, 0.1); flex:1; font-size: 1rem;" title="Trả ảnh về Dock"><i class="ph ph-arrow-u-down-left"></i> To Dock</button>
-                <button onclick="clearAllImages()" class="btn-icon" style="color:var(--danger); border-color:rgba(239, 68, 68, 0.3); flex:1; font-size: 1rem;" title="Xóa toàn bộ ảnh"><i class="ph ph-trash"></i> Clear Images</button>
+                <button onclick="resetBoard()" class="btn-icon" style="color:var(--warning); border-color:rgba(245, 158, 11, 0.3); background: rgba(245, 158, 11, 0.1); flex:1; font-size: 1rem;" title="Return all to Dock"><i class="ph ph-arrow-u-down-left"></i> To Dock</button>
+                <button onclick="clearAllImages()" class="btn-icon" style="color:var(--danger); border-color:rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.1); flex:1; font-size: 1rem;" title="Delete all images"><i class="ph ph-trash"></i> Clear Images</button>
             </div>
             
             <div id="dock-container-box" class="dock-container">
@@ -89,7 +89,7 @@
                         <span style="font-weight:800; font-size:1.1rem; color:var(--text-main);">Image Dock (<span id="dock-count">0</span>)</span>
                     </div>
                     <div style="display: flex; gap: 8px;">
-                        <button onclick="clearDock()" style="padding: 8px 12px; border-radius: 20px; border: 1px solid rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.1); color: var(--danger); font-size: 0.85rem; outline: none; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: 0.2s;" title="Xóa toàn bộ ảnh trong Dock"><i class="ph ph-trash"></i> Dock</button>
+                        <button onclick="clearDock()" style="padding: 8px 12px; border-radius: 20px; border: 1px solid rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.1); color: var(--danger); font-size: 0.85rem; outline: none; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: 0.2s;" title="Clear all images in Dock"><i class="ph ph-trash"></i> Dock</button>
                         <select id="dock-sort-select" style="padding: 8px 12px; border-radius: 20px; border: 1px solid var(--border-color); background: var(--bg-elevated); color: var(--text-main); font-size: 0.85rem; outline: none; cursor: pointer;" onchange="sortDock(this.value)">
                             <option value="">⇅ Sort By...</option>
                             <option value="newest">🕒 Newest Added</option>
@@ -158,7 +158,7 @@
 
             <div id="float-chapter-wrap" style="position: relative; display: none;">
                 <i class="ph-bold ph-bookmark-simple" style="position: absolute; left: 8px; top: 10px; color: var(--accent); font-size: 1rem;"></i>
-                <input type="text" id="float-chapter" onchange="applyChapter(this.value)" onkeydown="if(event.key==='Enter') this.blur();" class="float-input" style="width:75px; padding-left: 26px;" title="Chapter/Tập hiện tại" placeholder="Chap...">
+                <input type="text" id="float-chapter" onchange="applyChapter(this.value)" onkeydown="if(event.key==='Enter') this.blur();" class="float-input" style="width:75px; padding-left: 26px;" title="Current Chapter" placeholder="Chap...">
             </div>
 
             <button class="float-btn" onclick="toggleFloatMore(event)" id="btn-float-more" title="More Options"><i class="ph ph-dots-three-vertical"></i></button>
@@ -229,6 +229,15 @@
                     <span class="slider"></span>
                 </label>
             </div>
+
+            <!-- Nút bật tắt gộp tên khi Copy -->
+            <div class="setting-row">
+                <span class="setting-label" style="color: var(--primary);">Include Alt Name on Copy</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="setting-copy-alt-toggle" onchange="toggleCopyAltSetting(this.checked)">
+                    <span class="slider"></span>
+                </label>
+            </div>
             
             <div class="setting-row">
                 <span class="setting-label">Image Shape</span>
@@ -276,11 +285,13 @@
         </div>
     </div>
 
+    <!-- UI Rename siêu mượt (Đã chuẩn hóa Tiếng Anh) -->
     <div id="rename-modal-overlay" class="modal-overlay">
         <div class="modal">
             <h2>Rename Image</h2>
-            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 15px;">Tên ảnh sẽ được dùng làm từ khóa để tự động tra cứu (MyAnimeList, Google, v.v.)</p>
-            <input type="text" id="rename-input" placeholder="Enter new name..." style="margin-bottom: 15px;" onkeypress="if(event.key==='Enter') saveRename()">
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 15px;">Set an alternative name (e.g., Romaji or English) for easier Dock searching.</p>
+            <input type="text" id="rename-input" placeholder="Main Name..." style="margin-bottom: 10px;" onkeypress="if(event.key==='Enter') document.getElementById('rename-input-alt').focus()">
+            <input type="text" id="rename-input-alt" placeholder="Alternative Name (Optional)..." style="margin-bottom: 15px;" onkeypress="if(event.key==='Enter') saveRename()">
             <div class="modal-btns">
                 <button onclick="saveRename()" style="background: var(--primary); color: white;">Save Name</button>
                 <button onclick="closeModal('rename-modal-overlay')" style="background: var(--bg-surface); border: 1px solid var(--border-color); color: var(--text-main);">Cancel</button>
@@ -291,19 +302,19 @@
     <div id="sync-modal-overlay" class="modal-overlay">
         <div class="modal">
             <h2>P2P Data Sync</h2>
-            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 20px;">Đồng bộ dữ liệu trực tiếp giữa 2 thiết bị (Máy tính <-> Điện thoại) thông qua mạng.</p>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 20px;">Sync data directly between 2 devices (PC <-> Mobile) via network.</p>
             
             <div class="sync-box">
-                <h3><i class="ph ph-broadcast"></i> Host (Gửi dữ liệu)</h3>
-                <button onclick="generateSyncCode()" style="width: 100%; padding: 12px; background: var(--accent); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; margin-bottom: 10px;">Tạo mã PIN</button>
+                <h3><i class="ph ph-broadcast"></i> Host (Send Data)</h3>
+                <button onclick="generateSyncCode()" style="width: 100%; padding: 12px; background: var(--accent); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; margin-bottom: 10px;">Generate PIN</button>
                 <div style="text-align: center; font-size: 2.5rem; font-weight: 800; letter-spacing: 8px; color: var(--primary);" id="sync-code-display">----</div>
                 <div id="sync-wait-msg" style="display: none; text-align: center; color: var(--warning); font-size: 0.9rem; margin-top: 10px;"></div>
             </div>
 
             <div class="sync-box">
-                <h3><i class="ph ph-download-simple"></i> Receiver (Nhận dữ liệu)</h3>
-                <input type="text" id="sync-code-input" placeholder="Nhập PIN 4 số..." maxlength="4" style="text-align: center; font-size: 1.5rem; letter-spacing: 5px; margin-bottom: 10px;">
-                <button onclick="receiveSyncData()" style="width: 100%; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">Kết nối & Nhận</button>
+                <h3><i class="ph ph-download-simple"></i> Receiver (Receive Data)</h3>
+                <input type="text" id="sync-code-input" placeholder="Enter 4-digit PIN..." maxlength="4" style="text-align: center; font-size: 1.5rem; letter-spacing: 5px; margin-bottom: 10px;">
+                <button onclick="receiveSyncData()" style="width: 100%; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">Connect & Receive</button>
             </div>
 
             <div class="modal-btns">
@@ -419,7 +430,7 @@
     <div id="backup-modal-overlay" class="modal-overlay">
         <div class="modal">
             <h2>Files & Backup</h2>
-            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 15px;">Dự phòng (backup) toàn bộ dữ liệu ra file JSON để lưu trữ hoặc chuyển qua trình duyệt khác.</p>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 15px;">Backup all your data to a JSON file for safe keeping or transferring to another device.</p>
             <div class="modal-btns">
                 <button onclick="exportDataV2()" style="background: var(--accent); color: white;"><i class="ph ph-export"></i> Export All Data (JSON)</button>
                 
@@ -434,11 +445,11 @@
         </div>
     </div>
     
-    <script src="js/store.js"></script>
-    <script src="js/ui.js"></script>
-    <script src="js/sync.js"></script>
-    <script src="js/files.js"></script>
-    <script src="js/dragdrop.js"></script>
-    <script src="js/board.js"></script>
+    <script src="js/store.js?v=4"></script>
+    <script src="js/ui.js?v=4"></script>
+    <script src="js/sync.js?v=4"></script>
+    <script src="js/files.js?v=4"></script>
+    <script src="js/dragdrop.js?v=4"></script>
+    <script src="js/board.js?v=4"></script>
 </body>
 </html>
