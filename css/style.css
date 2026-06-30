@@ -397,4 +397,3 @@ body.hide-scores .score-badge { display: none !important; }
 .save-status-indicator { color: var(--text-muted); font-size: 0.85rem; display: flex; align-items: center; gap: 4px; margin-left: 15px; font-weight: 600; white-space: nowrap; transition: 0.3s opacity; }
 .ph-spinner { animation: spin 1s linear infinite; }
 #toast.error { background: var(--danger) !important; color: #fff !important; box-shadow: 0 10px 25px rgba(239, 68, 68, 0.4); }
-
