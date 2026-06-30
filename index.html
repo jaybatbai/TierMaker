@@ -230,7 +230,6 @@
                 </label>
             </div>
 
-            <!-- Nút bật tắt gộp tên khi Copy -->
             <div class="setting-row">
                 <span class="setting-label" style="color: var(--primary);">Include Alt Name on Copy</span>
                 <label class="toggle-switch">
@@ -285,15 +284,20 @@
         </div>
     </div>
 
-    <!-- UI Rename siêu mượt (Đã chuẩn hóa Tiếng Anh) -->
     <div id="rename-modal-overlay" class="modal-overlay">
         <div class="modal">
             <h2>Rename Image</h2>
-            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 15px;">Set an alternative name (e.g., Romaji or English) for easier Dock searching.</p>
-            <input type="text" id="rename-input" placeholder="Main Name..." style="margin-bottom: 10px;" onkeypress="if(event.key==='Enter') document.getElementById('rename-input-alt').focus()">
-            <input type="text" id="rename-input-alt" placeholder="Alternative Name (Optional)..." style="margin-bottom: 15px;" onkeypress="if(event.key==='Enter') saveRename()">
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 15px;">Add as many alternative names as you need for this image.</p>
+            
+            <div id="rename-inputs-container" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px;">
+                </div>
+            
+            <button onclick="addRenameField()" style="width: 100%; padding: 12px; margin-bottom: 20px; background: transparent; border: 1px dashed var(--border-color); color: var(--text-main); border-radius: 8px; cursor: pointer; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 6px; transition: 0.2s;" onmouseover="this.style.background='var(--bg-elevated)'" onmouseout="this.style.background='transparent'">
+                <i class="ph ph-plus-circle" style="font-size: 1.2rem;"></i> Add Another Name
+            </button>
+            
             <div class="modal-btns">
-                <button onclick="saveRename()" style="background: var(--primary); color: white;">Save Name</button>
+                <button onclick="saveRename()" style="background: var(--primary); color: white;">Save Names</button>
                 <button onclick="closeModal('rename-modal-overlay')" style="background: var(--bg-surface); border: 1px solid var(--border-color); color: var(--text-main);">Cancel</button>
             </div>
         </div>
