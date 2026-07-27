@@ -811,42 +811,44 @@ function bulkChangeStatus(val) {
 }
 
 // ==========================================
-// FLOATING TOOLBAR & DATA ACTIONS
+// FLOATING TOOLBAR & MOBILE SAFE BOUNDS
 // ==========================================
 function updateFloatingToolbarPosition(wrap) {
     const tb = document.getElementById('floating-toolbar');
-    const rect = wrap.getBoundingClientRect();
-    let tbHeight = tb.offsetHeight || 52;
-    let tbWidth = tb.offsetWidth || 300;
+    if (!tb || !wrap) return;
     
-    let topPos = rect.bottom + 15; 
+    const rect = wrap.getBoundingClientRect();
+    let tbHeight = tb.offsetHeight || 50;
+    let tbWidth = tb.offsetWidth || 280;
+    
+    let topPos = rect.bottom + 12; 
     let isFlipped = false;
     
-    if (topPos + tbHeight + 150 > window.innerHeight) { 
-        topPos = rect.top - tbHeight - 15; 
+    if (topPos + tbHeight + 80 > window.innerHeight) { 
+        topPos = rect.top - tbHeight - 12; 
         isFlipped = true; 
     }
     
-    if (isFlipped && topPos < 80) {
+    if (isFlipped && topPos < 60) {
         topPos = rect.top + (rect.height / 2) - (tbHeight / 2);
     }
     
     let leftPos = rect.left + (rect.width / 2);
-    const safePadding = 15;
+    const safePadding = 12;
     if (leftPos - (tbWidth / 2) < safePadding) leftPos = (tbWidth / 2) + safePadding;
     if (leftPos + (tbWidth / 2) > window.innerWidth - safePadding) leftPos = window.innerWidth - (tbWidth / 2) - safePadding;
 
-    tb.style.top = topPos + 'px'; 
+    tb.style.top = Math.max(10, topPos) + 'px'; 
     tb.style.left = leftPos + 'px';
     
     const titleEl = document.getElementById('float-image-title');
     
     if (!isFlipped) { 
         tb.classList.add('menu-down'); 
-        if(titleEl) { titleEl.style.bottom = 'auto'; titleEl.style.top = '-40px'; }
+        if(titleEl) { titleEl.style.bottom = 'auto'; titleEl.style.top = '-38px'; }
     } else { 
         tb.classList.remove('menu-down'); 
-        if(titleEl) { titleEl.style.top = 'auto'; titleEl.style.bottom = '-40px'; }
+        if(titleEl) { titleEl.style.top = 'auto'; titleEl.style.bottom = '-38px'; }
     }
 }
 
@@ -895,7 +897,7 @@ function downloadSelectedImage() {
 }
 
 // ==========================================
-// RENAME ĐỘNG & TỰ ĐỘNG LẤY TÊN TỪ MYANIMELIST
+// RENAME ĐỘNG DỄ DÀNG
 // ==========================================
 function openRenameModal() {
     if (!selectedImgObj) {
@@ -912,17 +914,6 @@ function openRenameModal() {
 
     names.forEach((n, idx) => addRenameField(n, idx === 0));
 
-    // DỰ PHÒNG TỐI ƯU UX: TỰ ĐỘNG BƠM NÚT "AUTO-FETCH" VÀO MODAL
-    let fetchBtn = document.getElementById('btn-auto-fetch-names');
-    if (!fetchBtn) {
-        fetchBtn = document.createElement('button');
-        fetchBtn.id = 'btn-auto-fetch-names';
-        fetchBtn.style.cssText = "width: 100%; padding: 10px; margin-bottom: 10px; background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.4); color: var(--accent); border-radius: 8px; cursor: pointer; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 6px; transition: 0.2s;";
-        fetchBtn.onclick = autoFetchMetadataForRename;
-        container.parentNode.insertBefore(fetchBtn, container.nextSibling);
-    }
-    fetchBtn.innerHTML = `<i class="ph ph-sparkle"></i> ${t('fetch_metadata_btn', '⚡ Auto-Fetch Titles (MyAnimeList)')}`;
-
     document.getElementById('rename-modal-overlay').style.display = 'flex';
     
     const firstInput = container.querySelector('input');
@@ -933,31 +924,6 @@ function openRenameModal() {
         if (menu) menu.style.display = 'none';
         const btn = document.getElementById('btn-float-more');
         if (btn) btn.style.background = 'transparent';
-    }
-}
-
-async function autoFetchMetadataForRename() {
-    const firstInput = document.querySelector('.dynamic-rename-input');
-    const query = firstInput ? firstInput.value.trim() : '';
-    if (!query) {
-        if(typeof showToast === 'function') showToast(currentLang==='vi'?"Vui lòng nhập tên chính trước khi tìm!":"Please enter a main name first!", true);
-        return;
-    }
-
-    if(typeof showLoading === 'function') showLoading(currentLang==='vi'?"Đang tìm tên từ MyAnimeList...":"Fetching titles from MyAnimeList...");
-    
-    const meta = await fetchJikanMetadata(query, searchType || 'manga');
-    if(typeof hideLoading === 'function') hideLoading();
-
-    if (meta && meta.names.length > 0) {
-        const container = document.getElementById('rename-inputs-container');
-        if (container) {
-            container.innerHTML = '';
-            meta.names.forEach((n, idx) => addRenameField(n, idx === 0));
-        }
-        if(typeof showToast === 'function') showToast(currentLang==='vi' ? `Đã tìm thấy ${meta.names.length} tên chính chủ & tên phụ!` : `Fetched ${meta.names.length} official titles!`);
-    } else {
-        if(typeof showToast === 'function') showToast(currentLang==='vi'?"Không tìm thấy thông tin trên MyAnimeList!":"No title info found on MyAnimeList!", true);
     }
 }
 
