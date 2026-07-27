@@ -42,6 +42,7 @@ function initTheme() {
     const savedTheme = localStorage.getItem('theme') || 'dark'; 
     document.documentElement.setAttribute('data-theme', savedTheme); 
     updateThemeIcon(savedTheme); 
+    if (typeof updateDOMTranslations === 'function') updateDOMTranslations();
 }
 
 function toggleTheme() { 
@@ -63,13 +64,15 @@ function updateThemeIcon(theme) {
 // ==========================================
 function loadMenu() { 
     const container = document.getElementById('list-container');
+    if (typeof updateDOMTranslations === 'function') updateDOMTranslations();
+
     try { 
         const req = db.transaction(['lists']).objectStore('lists').getAll();
         req.onsuccess = e => { 
             try {
                 const list = e.target.result; 
                 if (!list || list.length === 0) { 
-                    container.innerHTML = '<div style="text-align:center; padding: 60px 20px; color: var(--text-muted); grid-column: 1/-1; font-size: 1.1rem;"><i class="ph ph-folder-open" style="font-size: 3rem"></i><br><br>You don\'t have any tier lists yet.<br>Click <b>+ Create New Template</b> above!</div>'; 
+                    container.innerHTML = `<div style="text-align:center; padding: 60px 20px; color: var(--text-muted); grid-column: 1/-1; font-size: 1.1rem;"><i class="ph ph-folder-open" style="font-size: 3rem"></i><br><br>${t('empty_board_msg')}</div>`; 
                     return; 
                 }
                 let html = ''; 
@@ -95,7 +98,7 @@ function loadMenu() {
 }
 
 function openList(id) { 
-    showLoading('Opening...'); 
+    showLoading(t('processing', 'Processing...')); 
     try { 
         db.transaction(['lists']).objectStore('lists').get(id).onsuccess = e => { 
             currentListData = e.target.result; 
@@ -115,11 +118,15 @@ function openList(id) {
 }
 
 async function backToMenu() { 
-    document.getElementById('dock-search').value = ''; 
+    const searchInput = document.getElementById('dock-search');
+    if (searchInput) searchInput.value = ''; 
+    const statusSelect = document.getElementById('dock-status-filter');
+    if (statusSelect) statusSelect.value = '';
+
     if (typeof deselectImg === 'function') deselectImg(); 
     if (isNameCopyMode && typeof toggleNameCopyMode === 'function') toggleNameCopyMode(); 
     
-    showLoading('Saving board...'); 
+    showLoading(t('processing', 'Processing...')); 
     try { 
         if (isDirty) saveListSilent(currentListData); 
         const canvas = await html2canvas(document.getElementById('capture-area'), { scale: 1, backgroundColor: '#000', useCORS: true }); 
@@ -140,7 +147,7 @@ async function backToMenu() {
 
 function duplicateList(e, id) {
     e.stopPropagation();
-    showLoading("Duplicating...");
+    showLoading(t('processing', 'Processing...'));
     db.transaction(['lists']).objectStore('lists').get(id).onsuccess = e => { 
         let data = e.target.result;
         if(!data) return hideLoading();
@@ -152,14 +159,14 @@ function duplicateList(e, id) {
         tx.objectStore('lists').put(clone);
         tx.oncomplete = () => { 
             pushMenuAction({type: 'DUPLICATE', id: clone.id});
-            hideLoading(); showToast("Board duplicated!"); loadMenu(); 
+            hideLoading(); showToast(currentLang === 'vi' ? "Đã sao chép bảng!" : "Board duplicated!"); loadMenu(); 
         }
     };
 }
 
 function deleteSingleList(e, id, name) { 
     e.stopPropagation(); 
-    openConfirm("Delete Board", `Are you sure you want to delete the board "${name}"?`, () => { 
+    openConfirm(t('confirm_title'), `${t('are_you_sure')} "${name}"?`, () => { 
         db.transaction(['lists']).objectStore('lists').get(id).onsuccess = ev => {
             const boardData = ev.target.result;
             if(boardData) pushMenuAction({type: 'DELETE', data: boardData});
@@ -186,10 +193,10 @@ function confirmCreateList() {
         db.transaction(['lists']).objectStore('lists').getAll().onsuccess = e => { 
             const list = e.target.result; 
             if (list.some(l => l.name.toLowerCase() === name.toLowerCase())) { 
-                showToast('Board name already exists!', true); 
+                showToast(currentLang === 'vi' ? 'Tên bảng đã tồn tại!' : 'Board name already exists!', true); 
                 return; 
             } 
-            showLoading("Creating..."); 
+            showLoading(t('processing', 'Processing...')); 
             
             setTimeout(() => { 
                 let newTiers = [];
@@ -223,7 +230,7 @@ function confirmCreateList() {
                 const newList = { 
                     id: 'list_'+Date.now(), name: name, tiers: newTiers, dock: [],
                     shape: 'auto', background: null, fontIndex: 0, showFilename: false, scorePrecision: 2,
-                    isStoryMode: isStoryMode, copyIncludesAlt: true 
+                    isStoryMode: isStoryMode, copyNameMode: 'all', copyNameCount: 1 
                 }; 
                 saveListSilent(newList); 
                 pushMenuAction({type: 'CREATE', id: newList.id});
@@ -237,7 +244,15 @@ function openSettingsModal() {
     document.getElementById('setting-header-toggle').checked = (currentListData.headerVisible !== false);
     document.getElementById('setting-name-toggle').checked = !!currentListData.showFilename;
     document.getElementById('setting-story-toggle').checked = !!currentListData.isStoryMode;
-    document.getElementById('setting-copy-alt-toggle').checked = (currentListData.copyIncludesAlt !== false);
+    
+    const copySelect = document.getElementById('setting-copy-mode-select');
+    if (copySelect) copySelect.value = currentListData.copyNameMode || (currentListData.copyIncludesAlt === false ? 'first' : 'all');
+    
+    const copyCountInp = document.getElementById('setting-copy-count-input');
+    if (copyCountInp) copyCountInp.value = currentListData.copyNameCount || 1;
+    
+    toggleCopyCountVisibility();
+
     document.getElementById('setting-shape-select').value = currentListData.shape || 'auto';
     document.getElementById('setting-font-select').value = currentListData.fontIndex || 0;
     document.getElementById('setting-precision-select').value = currentListData.scorePrecision || 2;
@@ -246,7 +261,27 @@ function openSettingsModal() {
 
 function toggleHeaderSetting(isChecked) { currentListData.headerVisible = isChecked; commitChange(); }
 function toggleFilenameSetting(isChecked) { currentListData.showFilename = isChecked; commitChange(); }
-function toggleCopyAltSetting(isChecked) { currentListData.copyIncludesAlt = isChecked; commitChangeSilent(); }
+
+function changeCopyModeSetting(val) { 
+    currentListData.copyNameMode = val; 
+    toggleCopyCountVisibility();
+    commitChangeSilent(); 
+}
+
+function changeCopyCountSetting(val) { 
+    let count = parseInt(val) || 1;
+    currentListData.copyNameCount = Math.max(1, count); 
+    commitChangeSilent(); 
+}
+
+function toggleCopyCountVisibility() {
+    const mode = currentListData.copyNameMode || 'all';
+    const row = document.getElementById('setting-copy-count-row');
+    if (row) {
+        row.style.display = (mode === 'first_n') ? 'flex' : 'none';
+    }
+}
+
 function toggleStoryModeSetting(isChecked) { 
     currentListData.isStoryMode = isChecked; 
     commitChange(); 
@@ -313,11 +348,11 @@ function saveTierEdit() {
 function moveTierUp() { if (editingTierIndex > 0) { const tmp = currentListData.tiers[editingTierIndex]; currentListData.tiers[editingTierIndex] = currentListData.tiers[editingTierIndex - 1]; currentListData.tiers[editingTierIndex - 1] = tmp; editingTierIndex--; commitChange(); } }
 function moveTierDown() { if (editingTierIndex < currentListData.tiers.length - 1) { const tmp = currentListData.tiers[editingTierIndex]; currentListData.tiers[editingTierIndex] = currentListData.tiers[editingTierIndex + 1]; currentListData.tiers[editingTierIndex + 1] = tmp; editingTierIndex++; commitChange(); } }
 function addNewTier() { currentListData.tiers.push({name:'NEW', color:'#1a1a1a', items:[], minScore: 0, maxScore: 0}); commitChange(); }
-function deleteTier() { closeModal('modal-overlay'); openConfirm("Delete Row", "Delete this row? Images in this row (if any) will also be deleted.", () => { currentListData.tiers.splice(editingTierIndex, 1); commitChange(); }); }
-function resetBoard() { openConfirm("Return to Dock", "Return all images on the board to the Dock?", () => { currentListData.tiers.forEach(t => { currentListData.dock.push(...t.items); t.items = []; }); commitChange(); }); }
+function deleteTier() { closeModal('modal-overlay'); openConfirm(t('confirm_title'), currentLang==='vi'?'Xóa dòng này? Ảnh trong dòng cũng sẽ bị xóa.':'Delete this row? Images in this row will also be deleted.', () => { currentListData.tiers.splice(editingTierIndex, 1); commitChange(); }); }
+function resetBoard() { openConfirm(t('confirm_title'), currentLang==='vi'?'Đưa toàn bộ ảnh trên bảng về Khay Dock?':'Return all images on the board to the Dock?', () => { currentListData.tiers.forEach(t => { currentListData.dock.push(...t.items); t.items = []; }); commitChange(); }); }
 
 function clearAllImages() {
-    openConfirm("Clear All Images", "Delete all images from the board and Dock? This cannot be undone!", () => {
+    openConfirm(t('confirm_title'), currentLang==='vi'?'Xóa toàn bộ ảnh trên bảng và Dock? Thao tác này không thể hoàn tác!':'Delete all images from the board and Dock? This cannot be undone!', () => {
         currentListData.dock = [];
         currentListData.tiers.forEach(t => t.items = []);
         
@@ -325,19 +360,19 @@ function clearAllImages() {
         if (isMultiSelectMode) { multiSelectImages = []; if(typeof updateBulkUI==='function') updateBulkUI(); }
         
         commitChange();
-        showToast("All images cleared!");
+        showToast(currentLang==='vi'?'Đã xóa tất cả ảnh!':'All images cleared!');
     });
 }
 
 function clearDock() {
-    openConfirm("Clear Dock", "Delete all images waiting in the Dock? This cannot be undone!", () => {
+    openConfirm(t('confirm_title'), currentLang==='vi'?'Xóa toàn bộ ảnh trong Dock?':'Delete all images waiting in the Dock?', () => {
         currentListData.dock = [];
         
         if (typeof deselectImg === 'function') deselectImg();
         if (isMultiSelectMode) { multiSelectImages = []; if(typeof updateBulkUI==='function') updateBulkUI(); }
         
         commitChange();
-        showToast("Dock cleared!");
+        showToast(currentLang==='vi'?'Đã xóa Dock!':'Dock cleared!');
     });
 }
 
@@ -360,7 +395,152 @@ function saveCaption() {
 }
 
 // ==========================================
-// BYPASS CACHE: HỆ THỐNG BACKUP V2 MỚI
+// TÍNH NĂNG MỚI: TẠO BÁO CÁO VĂN BẢN & COPY TẤT CẢ TÊN
+// ==========================================
+function openExportReportModal() {
+    if (!currentListData) return;
+    
+    closeModal('settings-modal-overlay');
+    const floatMenu = document.getElementById('float-more-menu');
+    if (floatMenu) floatMenu.style.display = 'none';
+
+    document.getElementById('export-report-modal-overlay').style.display = 'flex';
+    generateReportText();
+}
+
+function generateReportText() {
+    if (!currentListData) return '';
+
+    const incTier = document.getElementById('report-opt-tier')?.checked ?? true;
+    const incScore = document.getElementById('report-opt-score')?.checked ?? true;
+    const incChap = document.getElementById('report-opt-chap')?.checked ?? true;
+    const incStatus = document.getElementById('report-opt-status')?.checked ?? true;
+    const scope = document.getElementById('report-opt-scope')?.value || 'both';
+
+    let lines = [];
+    lines.push(`📋 ${currentListData.name.toUpperCase()} - ${currentLang === 'vi' ? 'BÁO CÁO THỐNG KÊ' : 'STATISTICS REPORT'}`);
+    lines.push(`📅 ${new Date().toLocaleDateString()}`);
+    lines.push(`----------------------------------------\n`);
+
+    const formatItem = (item) => {
+        let nameStr = typeof getFormattedCopyName === 'function' ? getFormattedCopyName(item) : (item.names?.[0] || 'Untitled');
+        if (!nameStr) nameStr = currentLang === 'vi' ? 'Chưa đặt tên' : 'Untitled';
+        
+        let details = [];
+        let p = currentListData.scorePrecision || 2;
+
+        if (incScore && item.score !== undefined) {
+            details.push(`⭐ ${item.score.toFixed(p)}`);
+        }
+        if (incChap && item.chapter && currentListData.isStoryMode) {
+            details.push(`🔖 Chap ${item.chapter}`);
+        }
+        if (incStatus && item.readStatus && item.readStatus !== 'none' && currentListData.isStoryMode) {
+            let statusMap = {
+                'reading': currentLang === 'vi' ? 'Đang đọc' : 'Reading',
+                'completed': currentLang === 'vi' ? 'Đã xong' : 'Completed',
+                'on-hold': currentLang === 'vi' ? 'Tạm ngưng' : 'On-Hold',
+                'dropped': currentLang === 'vi' ? 'Đã bỏ' : 'Dropped',
+                'plan': currentLang === 'vi' ? 'Dự định' : 'Plan'
+            };
+            details.push(`[${statusMap[item.readStatus] || item.readStatus}]`);
+        }
+
+        let detailStr = details.length > 0 ? ` (${details.join(' | ')})` : '';
+        return `- ${nameStr}${detailStr}`;
+    };
+
+    if (scope === 'board' || scope === 'both') {
+        if (incTier) {
+            currentListData.tiers.forEach(tier => {
+                if (tier.items.length > 0) {
+                    lines.push(`=== ${tier.name} (${tier.items.length}) ===`);
+                    tier.items.forEach(item => lines.push(formatItem(item)));
+                    lines.push('');
+                }
+            });
+        } else {
+            lines.push(`=== ${currentLang === 'vi' ? 'TẤT CẢ ẢNH TRÊN BẢNG' : 'ALL BOARD IMAGES'} ===`);
+            currentListData.tiers.forEach(tier => {
+                tier.items.forEach(item => lines.push(formatItem(item)));
+            });
+            lines.push('');
+        }
+    }
+
+    if (scope === 'dock' || scope === 'both') {
+        if (currentListData.dock.length > 0) {
+            lines.push(`=== ${currentLang === 'vi' ? 'KHAY DOCK' : 'DOCK'} (${currentListData.dock.length}) ===`);
+            currentListData.dock.forEach(item => lines.push(formatItem(item)));
+            lines.push('');
+        }
+    }
+
+    const finalText = lines.join('\n').trim();
+    const textarea = document.getElementById('report-preview-textarea');
+    if (textarea) textarea.value = finalText;
+    return finalText;
+}
+
+async function copyFullReport() {
+    const text = generateReportText();
+    if (!text) return;
+    try {
+        await navigator.clipboard.writeText(text);
+        showToast(t('toast_copied_report'));
+    } catch (e) {
+        showToast("Failed to copy!", true);
+    }
+}
+
+async function copyAllNamesOnly() {
+    if (!currentListData) return;
+    const scope = document.getElementById('report-opt-scope')?.value || 'both';
+    let names = [];
+
+    const processItem = (item) => {
+        let nameStr = typeof getFormattedCopyName === 'function' ? getFormattedCopyName(item) : (item.names?.[0] || '');
+        if (nameStr) names.push(nameStr);
+    };
+
+    if (scope === 'board' || scope === 'both') {
+        currentListData.tiers.forEach(t => t.items.forEach(processItem));
+    }
+    if (scope === 'dock' || scope === 'both') {
+        currentListData.dock.forEach(processItem);
+    }
+
+    if (names.length === 0) {
+        showToast(t('toast_no_name'), true);
+        return;
+    }
+
+    const finalText = names.join('\n');
+    try {
+        await navigator.clipboard.writeText(finalText);
+        showToast(t('toast_copied_all_names'));
+    } catch (e) {
+        showToast("Failed to copy!", true);
+    }
+}
+
+function downloadReportTxt() {
+    const text = generateReportText();
+    if (!text) return;
+    
+    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    const safeName = currentListData.name ? currentListData.name.replace(/[^a-z0-9]/gi, '_').toLowerCase() : "tierlist";
+    a.download = `${safeName}_report.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast(currentLang === 'vi' ? "Đã tải file .TXT báo cáo!" : "Report .TXT downloaded!");
+}
+
+// ==========================================
+// BACKUP SYSTEM V2
 // ==========================================
 function openBackupModalV2() { 
     document.getElementById('backup-modal-overlay').style.display='flex'; 
@@ -383,7 +563,7 @@ function importDataV2(e) {
     const file = e.target.files[0]; 
     if (!file) return; 
     
-    showLoading("Reading and fixing file format...");
+    showLoading(t('processing', 'Processing...'));
 
     const reader = new FileReader(); 
     reader.onload = ev => { 
@@ -408,7 +588,7 @@ function importDataV2(e) {
                 
                 tx.oncomplete = () => { 
                     hideLoading();
-                    showToast('Data imported successfully!'); 
+                    showToast(currentLang==='vi'?'Phục hồi dữ liệu thành công!':'Data imported successfully!'); 
                     loadMenu(); 
                     closeModal('backup-modal-overlay'); 
                 }; 
@@ -428,10 +608,10 @@ function importDataV2(e) {
 }
 
 function wipeAllDataV2() { 
-    openConfirm("WARNING", "Wipe ALL data? Unrecoverable without backup.", () => { 
+    openConfirm(t('confirm_title'), currentLang==='vi'?'Xóa SẠCH toàn bộ dữ liệu? Không thể khôi phục!':'Wipe ALL data? Unrecoverable without backup.', () => { 
         try {
             db.transaction(['lists'], 'readwrite').objectStore('lists').clear().onsuccess = () => {
-                showToast("Database wiped clean!"); loadMenu(); closeModal('backup-modal-overlay');
+                showToast(currentLang==='vi'?'Đã xóa sạch bộ nhớ!':'Database wiped clean!'); loadMenu(); closeModal('backup-modal-overlay');
             };
         } catch (e) { showToast("Error wiping data!", true); }
     }); 
