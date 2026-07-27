@@ -1,6 +1,41 @@
 console.log("🚀 files.js loaded successfully!");
 
 // ==========================================
+// API BỔ TRỢ: TỰ ĐỘNG TẢI DỮ LIỆU TỪ MYANIMELIST
+// ==========================================
+async function fetchJikanMetadata(query, type = 'manga') {
+    if (!query) return null;
+    try {
+        const res = await fetch(`https://api.jikan.moe/v4/${type}?q=${encodeURIComponent(query)}&limit=1`);
+        if (!res.ok) return null;
+        const json = await res.json();
+        if (!json.data || json.data.length === 0) return null;
+        
+        const item = json.data[0];
+        const fetchedNames = new Set();
+        
+        if (item.title) fetchedNames.add(item.title);
+        if (item.title_english) fetchedNames.add(item.title_english);
+        if (item.title_japanese) fetchedNames.add(item.title_japanese);
+        if (Array.isArray(item.titles)) {
+            item.titles.forEach(tObj => {
+                if (tObj.title) fetchedNames.add(tObj.title);
+            });
+        }
+        
+        return {
+            names: Array.from(fetchedNames),
+            score: item.score || null,
+            chapters: item.chapters || null,
+            coverUrl: item.images?.webp?.large_image_url || item.images?.jpg?.large_image_url || null
+        };
+    } catch (e) {
+        console.error("Fetch metadata error:", e);
+        return null;
+    }
+}
+
+// ==========================================
 // FILE UPLOADING & IMAGE EXPORT ENGINE
 // ==========================================
 
@@ -17,7 +52,6 @@ function handleBgImage(e) {
                 const M = 1920; let w = i.width; let h = i.height;
                 if (w > M) { h *= (M/w); w = M; }
                 c.width = w; c.height = h; x.drawImage(i, 0, 0, w, h);
-                // Đổi sang WebP để hỗ trợ ảnh nền trong suốt & giảm RAM
                 currentListData.background = `url(${c.toDataURL('image/webp', 0.85)})`;
                 commitChange();
             } catch(err) { if(typeof showToast === 'function') showToast("Lỗi khi load Background!", true); } 
@@ -31,14 +65,13 @@ function saveImage() {
     if(typeof deselectImg === 'function') deselectImg(); 
     if(typeof showLoading === 'function') showLoading('Đang xuất ảnh chất lượng cao (PNG)...'); 
     
-    // Đợi 300ms để các UI thừa (như viền chọn ảnh) kịp biến mất trước khi chụp
     setTimeout(() => {
         const captureArea = document.getElementById('capture-area') || document.getElementById('main-capture-wrap');
         document.body.classList.add('exporting');
 
         html2canvas(captureArea, {
             useCORS: true, 
-            scale: 2, // Scale x2 đủ nét và an toàn không gây lỗi trên điện thoại yếu
+            scale: 2, 
             backgroundColor: null 
         }).then(canvas => {
             const link = document.createElement('a');
@@ -73,8 +106,9 @@ function processFilesArray(filesToProcess) {
                     const c = document.createElement('canvas'); const x = c.getContext('2d'); 
                     let w = i.width; let h = i.height; if (w > 1500) { h *= (1500/w); w = 1500; } 
                     c.width = w; c.height = h; x.drawImage(i, 0, 0, w, h); 
-                    // Chuyển hàng loạt sang WebP 85%
-                    currentListData.dock.push({ src: c.toDataURL('image/webp', 0.85), h: 85, name: f.name.replace(/\.[^/.]+$/, "") }); 
+                    
+                    let cleanName = f.name.replace(/\.[^/.]+$/, "");
+                    currentListData.dock.push({ src: c.toDataURL('image/webp', 0.85), h: 85, names: [cleanName] }); 
                 } catch(err) { errorCount++; } 
                 finally { 
                     processed++; 
@@ -110,8 +144,8 @@ function handleFiles(e) {
         
         const existingNames = new Set(); 
         if (currentListData) { 
-            currentListData.dock.forEach(img => { if(img.name) existingNames.add(img.name); }); 
-            currentListData.tiers.forEach(t => { t.items.forEach(img => { if(img.name) existingNames.add(img.name); }); }); 
+            currentListData.dock.forEach(img => { if(img.names && img.names[0]) existingNames.add(img.names[0]); }); 
+            currentListData.tiers.forEach(t => { t.items.forEach(img => { if(img.names && img.names[0]) existingNames.add(img.names[0]); }); }); 
         } 
         
         const newFiles = []; const duplicateFiles = []; 
@@ -126,12 +160,22 @@ function handleFiles(e) {
     }
 }
 
+// TỐI ƯU CẢI TIẾN: THÊM ẢNH TỪ URL + TỰ TẢI THÔNG TIN TÊN CHÍNH CHỦ
 async function importImageFromURL() {
     if (!currentListData) return;
-    const url = prompt("Paste Image URL here:\n(e.g., https://example.com/image.png)");
+    const url = prompt(currentLang === 'vi' ? "Dán URL ảnh vào đây:\n(Ví dụ: https://example.com/image.png)" : "Paste Image URL here:\n(e.g., https://example.com/image.png)");
     if (!url) return;
-    if(typeof showLoading === 'function') showLoading("Downloading image...");
+
+    let searchPrompt = prompt(currentLang === 'vi' ? "Nhập tên Anime/Manga để tự động tải tất cả tên phụ (hoặc để trống):" : "Enter Anime/Manga name to auto-fetch all titles (optional):");
+    
+    if(typeof showLoading === 'function') showLoading("Downloading & Fetching Info...");
+    
     try {
+        let meta = null;
+        if (searchPrompt && searchPrompt.trim()) {
+            meta = await fetchJikanMetadata(searchPrompt.trim(), searchType || 'manga');
+        }
+
         const proxyUrl = "https://corsproxy.io/?" + encodeURIComponent(url);
         let res = await fetch(proxyUrl);
         if (!res.ok) throw new Error("Network error with primary proxy");
@@ -147,12 +191,21 @@ async function importImageFromURL() {
                     if (w > M) { h *= (M/w); w = M; }
                     c.width = w; c.height = h; x.drawImage(i, 0, 0, w, h);
                     
-                    let cleanName = url.split('/').pop().split('?')[0].replace(/\.[^/.]+$/, "");
-                    if(!cleanName) cleanName = "web_image";
+                    let names = meta && meta.names.length > 0 ? meta.names : [];
+                    if (names.length === 0) {
+                        let cleanName = url.split('/').pop().split('?')[0].replace(/\.[^/.]+$/, "");
+                        names = [cleanName || "web_image"];
+                    }
                     
-                    // WebP cho ảnh tải từ URL
-                    currentListData.dock.push({ src: c.toDataURL('image/webp', 0.85), h: 85, name: cleanName });
-                    commitChange(); if(typeof hideLoading === 'function') hideLoading(); if(typeof showToast === 'function') showToast("Image imported!");
+                    currentListData.dock.push({ 
+                        src: c.toDataURL('image/webp', 0.85), 
+                        h: 85, 
+                        names: names 
+                    });
+
+                    commitChange(); 
+                    if(typeof hideLoading === 'function') hideLoading(); 
+                    if(typeof showToast === 'function') showToast(currentLang === 'vi' ? "Đã nhập ảnh và tải xong danh sách tên!" : "Image imported with official names!");
                 } catch(e) { if(typeof hideLoading === 'function') hideLoading(); if(typeof showToast === 'function') showToast("⚠️ Không thể đọc dữ liệu ảnh.", true); }
             };
             i.onerror = () => { if(typeof hideLoading === 'function') hideLoading(); if(typeof showToast === 'function') showToast("Invalid image URL.", true); }
@@ -174,7 +227,7 @@ async function downloadAllImagesAsZip() {
         const nameTally = {}; 
         const processItem = (item) => {
             if (!item.src) return;
-            let name = item.name ? item.name.replace(/\.[^/.]+$/, "") : "image";
+            let name = item.names && item.names.length > 0 ? item.names[0] : "image";
             if (nameTally[name] !== undefined) { nameTally[name]++; name = `${name} (${nameTally[name]})`; } 
             else { nameTally[name] = 0; }
             const filename = name + ".webp"; 
@@ -196,13 +249,12 @@ async function downloadAllImagesAsZip() {
     } catch (err) { if(typeof hideLoading === 'function') hideLoading(); if(typeof showToast === 'function') showToast("Lỗi tạo file ZIP!", true); }
 }
 
-// Bơm biến thành Global phòng trường hợp scope bị kẹt
 window.openBackupMenu = function() { 
     const modal = document.getElementById('backup-modal-overlay');
     if (modal) {
         modal.style.display = 'flex';
     } else {
-        alert("❌ Lỗi: Không tìm thấy giao diện Backup Modal trong index.html! Hãy kiểm tra lại code HTML nhé.");
+        alert("❌ Lỗi: Không tìm thấy giao diện Backup Modal!");
     }
 }
 
@@ -230,7 +282,6 @@ function importData(e) {
         setTimeout(() => {
             try { 
                 let data = JSON.parse(ev.target.result); 
-                
                 if (!Array.isArray(data) && typeof data === 'object') data = [data];
                 
                 data = data.map((item, index) => {
@@ -245,7 +296,6 @@ function importData(e) {
                 
                 const tx = db.transaction(['lists'], 'readwrite'); 
                 const store = tx.objectStore('lists'); 
-                
                 data.forEach(item => store.put(item)); 
                 
                 tx.oncomplete = () => { 
