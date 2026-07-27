@@ -36,16 +36,22 @@ function initGlobalClickAndDrop() {
 
             if (targetTier && targetTier.dataset.tierIndex !== undefined && !clickedImageWrap) {
                 e.preventDefault(); e.stopPropagation();
+
+                // CHẶN DI CHUYỂN KHI BẢNG ĐANG BỊ KHÓA (LOCK)
+                if (isLockScoreMode) {
+                    if(typeof showToast === 'function') showToast("🔒 Bảng đang khóa! Tắt Lock để chuyển ảnh sang Tier khác.", true);
+                    deselectImg();
+                    return;
+                }
+
                 try {
                     let sourceArray = (selectedImgObj.type === 'tier') ? currentListData.tiers[selectedImgObj.r].items : currentListData.dock;
                     
-                    // Tối ưu UX/Defensive: Xóa dựa trên reference thực tế
                     let oldIdx = sourceArray.indexOf(selectedImgObj.data);
                     if(oldIdx !== -1) sourceArray.splice(oldIdx, 1);
                     
                     currentListData.tiers[parseInt(targetTier.dataset.tierIndex)].items.push(selectedImgObj.data);
                     
-                    // Sửa lỗi văng null: Lưu data trước khi gọi deselectImg
                     let movedData = selectedImgObj.data;
                     if(typeof deselectImg === 'function') deselectImg(); 
                     lastDroppedData = movedData;
@@ -56,6 +62,14 @@ function initGlobalClickAndDrop() {
 
             if (targetDock && !clickedImageWrap) {
                 e.preventDefault(); e.stopPropagation();
+
+                // CHẶN THẢ VÀO DOCK KHI BẢNG ĐANG BỊ KHÓA (LOCK)
+                if (isLockScoreMode) {
+                    if(typeof showToast === 'function') showToast("🔒 Bảng đang khóa! Tắt Lock để di chuyển ảnh vào Dock.", true);
+                    deselectImg();
+                    return;
+                }
+
                 try {
                     let sourceArray = (selectedImgObj.type === 'tier') ? currentListData.tiers[selectedImgObj.r].items : currentListData.dock;
                     
@@ -64,7 +78,6 @@ function initGlobalClickAndDrop() {
                     
                     currentListData.dock.push(selectedImgObj.data);
                     
-                    // Tương tự, lưu data trước khi hủy selected
                     let movedData = selectedImgObj.data;
                     if(typeof deselectImg === 'function') deselectImg(); 
                     lastDroppedData = movedData;
@@ -80,9 +93,10 @@ function initGlobalClickAndDrop() {
     document.addEventListener('touchstart', handleOutsideClick, {passive: false, capture: true});
 
     const dockContainer = document.getElementById('dock-container-box');
-    dockContainer.ondragover = e => { e.preventDefault(); if (isDragMode && draggedItem && draggedItem.type !== 'row') e.dataTransfer.dropEffect = 'move'; };
+    dockContainer.ondragover = e => { e.preventDefault(); if (isDragMode && !isLockScoreMode && draggedItem && draggedItem.type !== 'row') e.dataTransfer.dropEffect = 'move'; };
     dockContainer.ondrop = e => { 
         e.preventDefault(); 
+        if (isLockScoreMode) return;
         try {
             if (isDragMode && draggedItem && draggedItem.type !== 'row' && draggedItem.data) {
                 let oldArray = (draggedItem.type === 'tier') ? currentListData.tiers[draggedItem.r].items : currentListData.dock;
@@ -92,7 +106,6 @@ function initGlobalClickAndDrop() {
                     dropIndex = elements.indexOf(currentPlaceholder);
                 }
                 
-                // Tránh lỗi index ảo gây nhân bản hoặc sai vị trí
                 let oldIdx = oldArray.indexOf(draggedItem.data);
                 if(oldArray === currentListData.dock && oldIdx !== -1 && oldIdx < dropIndex) dropIndex--;
                 if(oldIdx !== -1) oldArray.splice(oldIdx, 1);
@@ -104,9 +117,10 @@ function initGlobalClickAndDrop() {
     };
 
     const tz = document.getElementById('trash-zone');
-    tz.ondragover = e => { e.preventDefault(); if(isDragMode && draggedItem) { e.dataTransfer.dropEffect = 'move'; tz.classList.add('hover'); } };
+    tz.ondragover = e => { e.preventDefault(); if(isDragMode && !isLockScoreMode && draggedItem) { e.dataTransfer.dropEffect = 'move'; tz.classList.add('hover'); } };
     tz.ondragleave = () => tz.classList.remove('hover');
     tz.ondrop = () => { 
+        if (isLockScoreMode) return;
         try {
             if (isDragMode && draggedItem) { 
                 let oldArray = (draggedItem.type === 'tier') ? currentListData.tiers[draggedItem.r].items : currentListData.dock; 
