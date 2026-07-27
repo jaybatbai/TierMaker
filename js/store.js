@@ -123,7 +123,6 @@ const TRANSLATIONS = {
         add_alt_names_desc: "Add as many alternative names as you need for this image.",
         add_another_name: "Add Another Name",
         save_names: "Save Names",
-        fetch_metadata_btn: "⚡ Auto-Fetch Titles (MyAnimeList)",
         
         create_new_board: "Create New Board",
         board_name_placeholder: "Enter board name...",
@@ -288,7 +287,6 @@ const TRANSLATIONS = {
         add_alt_names_desc: "Thêm nhiều tên phụ cho bức ảnh này nếu cần.",
         add_another_name: "Thêm Tên Phụ Khác",
         save_names: "Lưu Tên",
-        fetch_metadata_btn: "⚡ Tự động tìm tên (MyAnimeList)",
         
         create_new_board: "Tạo Bảng Mới",
         board_name_placeholder: "Nhập tên bảng...",
@@ -521,4 +519,147 @@ function isValidTierData(data) {
     if (!Array.isArray(data)) return false;
     return data.every(l => l.id && typeof l.name === 'string' && Array.isArray(l.tiers) && Array.isArray(l.dock));
   } catch (e) { return false; }
+}
+
+// BÁO CÁO VĂN BẢN
+function openExportReportModal() {
+    if (!currentListData) return;
+    
+    closeModal('settings-modal-overlay');
+    const floatMenu = document.getElementById('float-more-menu');
+    if (floatMenu) floatMenu.style.display = 'none';
+
+    document.getElementById('export-report-modal-overlay').style.display = 'flex';
+    generateReportText();
+}
+
+function generateReportText() {
+    if (!currentListData) return '';
+
+    const incTier = document.getElementById('report-opt-tier')?.checked ?? true;
+    const incScore = document.getElementById('report-opt-score')?.checked ?? true;
+    const incChap = document.getElementById('report-opt-chap')?.checked ?? true;
+    const incStatus = document.getElementById('report-opt-status')?.checked ?? true;
+    const scope = document.getElementById('report-opt-scope')?.value || 'both';
+
+    let lines = [];
+    lines.push(`📋 ${currentListData.name.toUpperCase()} - ${currentLang === 'vi' ? 'BÁO CÁO THỐNG KÊ' : 'STATISTICS REPORT'}`);
+    lines.push(`📅 ${new Date().toLocaleDateString()}`);
+    lines.push(`----------------------------------------\n`);
+
+    const formatItem = (item) => {
+        let nameStr = typeof getFormattedCopyName === 'function' ? getFormattedCopyName(item) : (item.names?.[0] || 'Untitled');
+        if (!nameStr) nameStr = currentLang === 'vi' ? 'Chưa đặt tên' : 'Untitled';
+        
+        let details = [];
+        let p = currentListData.scorePrecision || 2;
+
+        if (incScore && item.score !== undefined) {
+            details.push(`⭐ ${item.score.toFixed(p)}`);
+        }
+        if (incChap && item.chapter && currentListData.isStoryMode) {
+            details.push(`🔖 Chap ${item.chapter}`);
+        }
+        if (incStatus && item.readStatus && item.readStatus !== 'none' && currentListData.isStoryMode) {
+            let statusMap = {
+                'reading': currentLang === 'vi' ? 'Đang đọc' : 'Reading',
+                'completed': currentLang === 'vi' ? 'Đã xong' : 'Completed',
+                'on-hold': currentLang === 'vi' ? 'Tạm ngưng' : 'On-Hold',
+                'dropped': currentLang === 'vi' ? 'Đã bỏ' : 'Dropped',
+                'plan': currentLang === 'vi' ? 'Dự định' : 'Plan'
+            };
+            details.push(`[${statusMap[item.readStatus] || item.readStatus}]`);
+        }
+
+        let detailStr = details.length > 0 ? ` (${details.join(' | ')})` : '';
+        return `- ${nameStr}${detailStr}`;
+    };
+
+    if (scope === 'board' || scope === 'both') {
+        if (incTier) {
+            currentListData.tiers.forEach(tier => {
+                if (tier.items.length > 0) {
+                    lines.push(`=== ${tier.name} (${tier.items.length}) ===`);
+                    tier.items.forEach(item => lines.push(formatItem(item)));
+                    lines.push('');
+                }
+            });
+        } else {
+            lines.push(`=== ${currentLang === 'vi' ? 'TẤT CẢ ẢNH TRÊN BẢNG' : 'ALL BOARD IMAGES'} ===`);
+            currentListData.tiers.forEach(tier => {
+                tier.items.forEach(item => lines.push(formatItem(item)));
+            });
+            lines.push('');
+        }
+    }
+
+    if (scope === 'dock' || scope === 'both') {
+        if (currentListData.dock.length > 0) {
+            lines.push(`=== ${currentLang === 'vi' ? 'KHAY DOCK' : 'DOCK'} (${currentListData.dock.length}) ===`);
+            currentListData.dock.forEach(item => lines.push(formatItem(item)));
+            lines.push('');
+        }
+    }
+
+    const finalText = lines.join('\n').trim();
+    const textarea = document.getElementById('report-preview-textarea');
+    if (textarea) textarea.value = finalText;
+    return finalText;
+}
+
+async function copyFullReport() {
+    const text = generateReportText();
+    if (!text) return;
+    try {
+        await navigator.clipboard.writeText(text);
+        showToast(t('toast_copied_report'));
+    } catch (e) {
+        showToast("Failed to copy!", true);
+    }
+}
+
+async function copyAllNamesOnly() {
+    if (!currentListData) return;
+    const scope = document.getElementById('report-opt-scope')?.value || 'both';
+    let names = [];
+
+    const processItem = (item) => {
+        let nameStr = typeof getFormattedCopyName === 'function' ? getFormattedCopyName(item) : (item.names?.[0] || '');
+        if (nameStr) names.push(nameStr);
+    };
+
+    if (scope === 'board' || scope === 'both') {
+        currentListData.tiers.forEach(t => t.items.forEach(processItem));
+    }
+    if (scope === 'dock' || scope === 'both') {
+        currentListData.dock.forEach(processItem);
+    }
+
+    if (names.length === 0) {
+        showToast(t('toast_no_name'), true);
+        return;
+    }
+
+    const finalText = names.join('\n');
+    try {
+        await navigator.clipboard.writeText(finalText);
+        showToast(t('toast_copied_all_names'));
+    } catch (e) {
+        showToast("Failed to copy!", true);
+    }
+}
+
+function downloadReportTxt() {
+    const text = generateReportText();
+    if (!text) return;
+    
+    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    const safeName = currentListData.name ? currentListData.name.replace(/[^a-z0-9]/gi, '_').toLowerCase() : "tierlist";
+    a.download = `${safeName}_report.txt`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    showToast(currentLang === 'vi' ? "Đã tải file .TXT báo cáo!" : "Report .TXT downloaded!");
 }
