@@ -20,51 +20,64 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.2/peerjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
-    <link rel="stylesheet" href="css/style.css?v=4">
+    <link rel="stylesheet" href="css/style.css?v=5">
 </head>
 <body>
-    <div id="drop-overlay">Drop Images Here</div>
+    <div id="drop-overlay" data-i18n="drop_overlay">Drop Images Here</div>
     <div id="trash-zone" aria-label="Delete area"><i class="ph ph-trash" style="font-size: 32px"></i></div>
     <div id="toast" role="alert"></div>
     
     <div id="loading-overlay">
         <div class="spinner"></div>
-        <p id="loading-text" style="margin-top: 20px; text-align: center; line-height: 1.5;">Processing...</p>
+        <p id="loading-text" style="margin-top: 20px; text-align: center; line-height: 1.5;" data-i18n="processing">Processing...</p>
     </div>
 
     <div id="app-container">
         <div id="menu-screen">
             <div class="app-header">
                 <button id="btn-menu-undo" class="btn-icon" onclick="undoMenuAction()" style="display: none; background: var(--bg-surface); border: 1px solid var(--border-color); color: var(--text-main); font-size: 0.95rem; border-radius: 8px; padding: 8px 12px; cursor: pointer; transition: 0.2s; flex-shrink: 0;" title="Undo (Ctrl+Z)"><i class="ph ph-arrow-u-up-left"></i></button>
-                <h1 class="app-title">Tier<span>Maker</span></h1>
+                <button class="lang-toggle-btn" onclick="toggleLanguage()" title="Change Language"><i class="ph ph-globe"></i> VI</button>
+                <h1 class="app-title"><span data-i18n="app_title">Tier</span><span style="color: var(--primary);" data-i18n="app_subtitle">Maker</span></h1>
                 <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle Theme" title="Light/Dark Theme"><i class="ph ph-moon"></i></button>
             </div>
             
             <div class="menu-actions">
-                <button class="btn-create" onclick="openCreateModal()"><i class="ph ph-plus"></i> Create New Template</button>
-                <button class="btn-sync" onclick="openSyncModal()"><i class="ph ph-rocket"></i> P2P Sync (AirDrop) - Fast</button>
-                <button class="btn-data" onclick="openBackupModalV2()"><i class="ph ph-archive"></i> Files & Local Backup</button>
+                <button class="btn-create" onclick="openCreateModal()"><i class="ph ph-plus"></i> <span data-i18n="create_template">Create New Template</span></button>
+                <button class="btn-sync" onclick="openSyncModal()"><i class="ph ph-rocket"></i> <span data-i18n="p2p_sync">P2P Sync (AirDrop)</span></button>
+                <button class="btn-data" onclick="openBackupModalV2()"><i class="ph ph-archive"></i> <span data-i18n="files_backup">Files & Local Backup</span></button>
             </div>
             <div id="list-container" role="list">Loading...</div>
         </div>
         
         <div id="editor-screen" class="hidden">
             <div class="top-bar">
-                <button class="btn-back" onclick="backToMenu()" aria-label="Back"><i class="ph ph-caret-left"></i> Menu</button>
+                <button class="btn-back" onclick="backToMenu()" aria-label="Back"><i class="ph ph-caret-left"></i> <span data-i18n="menu">Menu</span></button>
                 <input type="text" id="list-name" class="list-name-input" oninput="debounceSaveName()" aria-label="Tier List Name">
                 
                 <span id="save-status" class="save-status-indicator"></span>
 
                 <div class="top-actions">
-                    <button id="btn-name-copy" class="btn-icon" onclick="toggleNameCopyMode()" title="Show names and click to copy"><i class="ph ph-text-t"></i> Name: OFF</button>
-                    <button id="btn-score-toggle" class="btn-icon active" onclick="toggleScoreMode()" title="Toggle Score Badge" style="background: rgba(245, 158, 11, 0.1); color: var(--warning); border-color: rgba(245, 158, 11, 0.3);"><i class="ph ph-star"></i> Score: ON</button>
-                    <button id="btn-status-toggle" class="btn-icon" onclick="toggleStatusMode()" title="Toggle Status Icon"><i class="ph ph-bookmark"></i> Status: OFF</button>
-                    <button id="btn-lock-score" class="btn-icon" onclick="toggleLockScoreMode()" title="Lock Image Scores"><i class="ph ph-lock-key-open"></i> Lock: OFF</button>
-                    <button id="btn-multi-select" class="btn-icon" onclick="toggleMultiSelectMode()" title="Multi-select Mode"><i class="ph ph-check-square"></i> Select: OFF</button>
-                    <button id="btn-drag-toggle" class="btn-icon active" onclick="toggleDragMode()" title="Toggle Drag/Scroll Mode"><i class="ph ph-hand-grabbing"></i> Drag: ON</button>
-                    <button class="btn-icon" onclick="openHelpModal()" aria-label="Shortcuts" title="Shortcuts"><i class="ph ph-keyboard"></i></button>
-                    <button class="btn-icon" onclick="undo()" aria-label="Undo" title="Undo (Ctrl+Z)"><i class="ph ph-arrow-u-up-left"></i></button>
-                    <button class="btn-icon" onclick="redo()" aria-label="Redo" title="Redo (Ctrl+Y)"><i class="ph ph-arrow-u-up-right"></i></button>
+                    <!-- NHÓM 1: CHẾ ĐỘ THAO TÁC BẢNG -->
+                    <div class="toolbar-group">
+                        <button id="btn-drag-toggle" class="btn-icon active" onclick="toggleDragMode()" title="Toggle Drag/Scroll Mode"><i class="ph ph-hand-grabbing"></i> Drag: ON</button>
+                        <button id="btn-multi-select" class="btn-icon" onclick="toggleMultiSelectMode()" title="Multi-select Mode"><i class="ph ph-check-square"></i> Select: OFF</button>
+                        <button id="btn-lock-score" class="btn-icon" onclick="toggleLockScoreMode()" title="Lock Image Scores"><i class="ph ph-lock-key-open"></i> Lock: OFF</button>
+                    </div>
+
+                    <!-- NHÓM 2: HIỂN THỊ BADGE -->
+                    <div class="toolbar-group">
+                        <button id="btn-name-copy" class="btn-icon" onclick="toggleNameCopyMode()" title="Show names and click to copy"><i class="ph ph-text-t"></i> Name: OFF</button>
+                        <button id="btn-score-toggle" class="btn-icon active" onclick="toggleScoreMode()" title="Toggle Score Badge" style="color: var(--warning);"><i class="ph ph-star"></i> Score: ON</button>
+                        <button id="btn-status-toggle" class="btn-icon" onclick="toggleStatusMode()" title="Toggle Status Icon"><i class="ph ph-bookmark"></i> Status: OFF</button>
+                    </div>
+
+                    <!-- NHÓM 3: TIỆN ÍCH HỆ THỐNG -->
+                    <div class="toolbar-group">
+                        <button class="lang-toggle-btn" onclick="toggleLanguage()" title="Change Language"><i class="ph ph-globe"></i> VI</button>
+                        <button class="btn-icon" onclick="openHelpModal()" aria-label="Shortcuts" title="Shortcuts"><i class="ph ph-keyboard"></i></button>
+                        <button class="btn-icon" onclick="undo()" aria-label="Undo" title="Undo (Ctrl+Z)"><i class="ph ph-arrow-u-up-left"></i></button>
+                        <button class="btn-icon" onclick="redo()" aria-label="Redo" title="Redo (Ctrl+Y)"><i class="ph ph-arrow-u-up-right"></i></button>
+                    </div>
                 </div>
             </div>
             
@@ -76,57 +89,68 @@
             </div>
             
             <div class="board-footer-actions" style="padding: 0 20px 20px 20px; display:flex; gap:12px;">
-                <button onclick="addNewTier()" class="btn-icon" style="flex:1; background: var(--primary); color: white; border: none; font-size: 1rem;"><i class="ph ph-plus-circle"></i> Add Row</button>
-                <button onclick="openSettingsModal()" class="btn-icon" style="flex:1; font-size: 1rem;"><i class="ph ph-gear"></i> Settings</button>
-                <button onclick="resetBoard()" class="btn-icon" style="color:var(--warning); border-color:rgba(245, 158, 11, 0.3); background: rgba(245, 158, 11, 0.1); flex:1; font-size: 1rem;" title="Return all to Dock"><i class="ph ph-arrow-u-down-left"></i> To Dock</button>
-                <button onclick="clearAllImages()" class="btn-icon" style="color:var(--danger); border-color:rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.1); flex:1; font-size: 1rem;" title="Delete all images"><i class="ph ph-trash"></i> Clear Images</button>
+                <button onclick="addNewTier()" class="btn-icon" style="flex:1; background: var(--primary); color: white; border: none; font-size: 0.95rem;"><i class="ph ph-plus-circle"></i> <span data-i18n="add_row">Add Row</span></button>
+                <button onclick="openSettingsModal()" class="btn-icon" style="flex:1; font-size: 0.95rem;"><i class="ph ph-gear"></i> <span data-i18n="settings">Settings</span></button>
+                <button onclick="resetBoard()" class="btn-icon" style="color:var(--warning); border-color:rgba(245, 158, 11, 0.3); background: rgba(245, 158, 11, 0.1); flex:1; font-size: 0.95rem;" title="Return all to Dock"><i class="ph ph-arrow-u-down-left"></i> <span data-i18n="to_dock">To Dock</span></button>
+                <button onclick="clearAllImages()" class="btn-icon" style="color:var(--danger); border-color:rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.1); flex:1; font-size: 0.95rem;" title="Delete all images"><i class="ph ph-trash"></i> <span data-i18n="clear_images">Clear Images</span></button>
             </div>
             
             <div id="dock-container-box" class="dock-container">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px; gap: 10px; flex-wrap: wrap;">
                     <div style="cursor:pointer; display:flex; align-items:center; gap: 8px; user-select: none;" onclick="toggleDock()">
                         <i class="ph ph-caret-down" id="dock-caret" style="font-size: 1.2rem; color: var(--text-muted)"></i>
-                        <span style="font-weight:800; font-size:1.1rem; color:var(--text-main);">Image Dock (<span id="dock-count">0</span>)</span>
+                        <span style="font-weight:800; font-size:1.1rem; color:var(--text-main);"><span data-i18n="image_dock">Image Dock</span> (<span id="dock-count">0</span>)</span>
                     </div>
-                    <div style="display: flex; gap: 8px;">
-                        <button onclick="clearDock()" style="padding: 8px 12px; border-radius: 20px; border: 1px solid rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.1); color: var(--danger); font-size: 0.85rem; outline: none; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: 0.2s;" title="Clear all images in Dock"><i class="ph ph-trash"></i> Dock</button>
-                        <select id="dock-sort-select" style="padding: 8px 12px; border-radius: 20px; border: 1px solid var(--border-color); background: var(--bg-elevated); color: var(--text-main); font-size: 0.85rem; outline: none; cursor: pointer;" onchange="sortDock(this.value)">
-                            <option value="">⇅ Sort By...</option>
-                            <option value="newest">🕒 Newest Added</option>
-                            <option value="az">🔤 Name (A-Z)</option>
-                            <option value="za">🔤 Name (Z-A)</option>
-                            <option value="random">🎲 Shuffle</option>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+                        <select id="dock-status-filter" style="padding: 8px 12px; border-radius: 20px; border: 1px solid var(--border-color); background: var(--bg-elevated); color: var(--text-main); font-size: 0.85rem; outline: none; cursor: pointer; display: none;" onchange="filterAllImages()">
+                            <option value="" data-i18n="all_status">🔖 Tất cả Trạng thái</option>
+                            <option value="has-status" data-i18n="has_status">✨ Có Trạng thái</option>
+                            <option value="reading" data-i18n="status_reading">📖 Đang đọc</option>
+                            <option value="completed" data-i18n="status_completed">✅ Đã xong</option>
+                            <option value="on-hold" data-i18n="status_on_hold">⏸️ Tạm ngưng</option>
+                            <option value="dropped" data-i18n="status_dropped">⛔ Đã bỏ</option>
+                            <option value="plan" data-i18n="status_plan">⏰ Dự định</option>
                         </select>
-                        <input type="text" id="dock-search" placeholder="Search..." oninput="filterDock()" style="padding: 8px 16px; border-radius: 20px; border: 1px solid var(--border-color); background: var(--bg-surface); color: var(--text-main); font-size: 0.9rem; outline: none; width: 120px; transition: 0.2s;">
+
+                        <select id="dock-sort-select" style="padding: 8px 12px; border-radius: 20px; border: 1px solid var(--border-color); background: var(--bg-elevated); color: var(--text-main); font-size: 0.85rem; outline: none; cursor: pointer;" onchange="sortDock(this.value)">
+                            <option value="" data-i18n="sort_by">⇅ Sort By...</option>
+                            <option value="newest" data-i18n="newest">🕒 Newest Added</option>
+                            <option value="az" data-i18n="name_az">🔤 Name (A-Z)</option>
+                            <option value="za" data-i18n="name_za">🔤 Name (Z-A)</option>
+                            <option value="random" data-i18n="shuffle">🎲 Shuffle</option>
+                        </select>
+
+                        <input type="text" id="dock-search" placeholder="🔍 Search images..." data-i18n-placeholder="search_placeholder" oninput="filterAllImages()" style="padding: 8px 16px; border-radius: 20px; border: 1px solid var(--border-color); background: var(--bg-surface); color: var(--text-main); font-size: 0.9rem; outline: none; width: 140px; transition: 0.2s;">
+                        <button onclick="clearDock()" style="padding: 8px 12px; border-radius: 20px; border: 1px solid rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.1); color: var(--danger); font-size: 0.85rem; outline: none; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: 0.2s;" title="Clear all images in Dock"><i class="ph ph-trash"></i> <span data-i18n="clear_dock">Dock</span></button>
                     </div>
                 </div>
                 <div id="dock" aria-label="Image Dock"></div>
             </div>
             
             <div class="bottom-toolbar" id="main-bottom-toolbar">
-                <button class="btn-bottom btn-save" onclick="saveImage()"><i class="ph ph-download-simple"></i> Save Image</button>
-                <button class="btn-bottom btn-add" style="background: var(--bg-surface); color: var(--text-main); border: 1px solid var(--border-color);" onclick="importImageFromURL()"><i class="ph ph-globe"></i> Add URL</button>
-                <button class="btn-bottom btn-add" onclick="document.getElementById('imgInput').click()"><i class="ph ph-images"></i> Add Images</button>
+                <button class="btn-bottom btn-save" onclick="saveImage()"><i class="ph ph-download-simple"></i> <span data-i18n="save_image">Save Image</span></button>
+                <button class="btn-bottom btn-add" style="background: var(--bg-surface); color: var(--text-main); border: 1px solid var(--border-color);" onclick="importImageFromURL()"><i class="ph ph-globe"></i> <span data-i18n="add_url">Add URL</span></button>
+                <button class="btn-bottom btn-add" onclick="document.getElementById('imgInput').click()"><i class="ph ph-images"></i> <span data-i18n="add_images">Add Images</span></button>
             </div>
             
             <div id="bulk-action-bar">
                 <span id="bulk-count" style="font-weight: 800; font-size: 0.95rem; white-space: nowrap;"><i class="ph ph-check-square"></i> 0 Selected</span>
                 <div style="display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; align-items: center; scrollbar-width: none;">
-                    <button class="btn-bulk" id="btn-bulk-select-all" style="background: var(--accent); flex-shrink: 0;" onclick="selectAllImages()"><i class="ph ph-check-square-offset"></i> Select All</button>
+                    <button class="btn-bulk" id="btn-bulk-select-all" style="background: var(--accent); flex-shrink: 0;" onclick="selectAllImages()"><i class="ph ph-check-square-offset"></i> <span data-i18n="select_all">Select All</span></button>
                     
                     <select id="bulk-status-select" class="btn-bulk" onchange="bulkChangeStatus(this.value)" style="background: rgba(59, 130, 246, 0.9); border:none; outline:none; appearance:none; cursor:pointer; text-align:center; padding: 10px 14px; min-width: max-content;">
-                        <option value="">🔖 Change Status</option>
-                        <option value="none">Remove Status</option>
-                        <option value="reading">📖 Reading</option>
-                        <option value="completed">✅ Completed</option>
-                        <option value="on-hold">⏸️ On-Hold</option>
-                        <option value="dropped">⛔ Dropped</option>
-                        <option value="plan">⏰ Plan to Read</option>
+                        <option value="" data-i18n="change_status">🔖 Change Status</option>
+                        <option value="none" data-i18n="remove_status">Remove Status</option>
+                        <option value="reading" data-i18n="status_reading">📖 Reading</option>
+                        <option value="completed" data-i18n="status_completed">✅ Completed</option>
+                        <option value="on-hold" data-i18n="status_on_hold">⏸️ On-Hold</option>
+                        <option value="dropped" data-i18n="status_dropped">⛔ Dropped</option>
+                        <option value="plan" data-i18n="status_plan">⏰ Plan to Read</option>
                     </select>
 
-                    <button class="btn-bulk" style="background: rgba(16, 185, 129, 0.9); flex-shrink: 0;" onclick="bulkToggleLock()"><i class="ph ph-lock-key"></i> Toggle Lock</button>
-                    <button class="btn-bulk" style="flex-shrink: 0;" onclick="bulkMoveToDock()"><i class="ph ph-arrow-down"></i> To Dock</button>
-                    <button class="btn-bulk" style="background: rgba(239, 68, 68, 0.9); flex-shrink: 0;" onclick="bulkDelete()"><i class="ph ph-trash"></i> Delete</button>
+                    <button class="btn-bulk" style="background: rgba(16, 185, 129, 0.9); flex-shrink: 0;" onclick="bulkToggleLock()"><i class="ph ph-lock-key"></i> <span data-i18n="toggle_lock">Toggle Lock</span></button>
+                    <button class="btn-bulk" style="flex-shrink: 0;" onclick="bulkMoveToDock()"><i class="ph ph-arrow-down"></i> <span data-i18n="to_dock">To Dock</span></button>
+                    <button class="btn-bulk" style="background: rgba(239, 68, 68, 0.9); flex-shrink: 0;" onclick="bulkDelete()"><i class="ph ph-trash"></i> <span data-i18n="delete">Delete</span></button>
                 </div>
             </div>
 
@@ -183,6 +207,7 @@
                     <button class="float-more-btn" onclick="openRenameModal()"><i class="ph ph-pencil-simple"></i> Rename</button>
                     <button class="float-more-btn" onclick="copyImageName()"><i class="ph ph-copy"></i> Copy Name</button>
                     <button class="float-more-btn" onclick="clearImageName()"><i class="ph ph-prohibit"></i> Clear Name</button>
+                    <button class="float-more-btn" onclick="openExportReportModal()"><i class="ph ph-file-text"></i> Report & Export</button>
                     <button class="float-more-btn" onclick="applyToAll()"><i class="ph ph-arrows-out-simple"></i> Match Size</button>
                     <button class="float-more-btn" onclick="moveToDock()"><i class="ph ph-arrow-down"></i> Send to Dock</button>
                     <button class="float-more-btn" onclick="downloadSelectedImage()"><i class="ph ph-download-simple"></i> Download</button>
@@ -193,152 +218,225 @@
 
     <div id="confirm-modal" class="modal-overlay">
         <div class="modal">
-            <h2 id="confirm-title">Confirm</h2>
-            <p id="confirm-desc" style="color: var(--text-muted); margin-bottom: 20px;">Are you sure?</p>
+            <h2 id="confirm-title" data-i18n="confirm_title">Confirm</h2>
+            <p id="confirm-desc" style="color: var(--text-muted); margin-bottom: 20px;" data-i18n="are_you_sure">Are you sure?</p>
             <div class="modal-btns">
-                <button onclick="execConfirm()" style="background: var(--primary); color: white;">Confirm</button>
-                <button onclick="execCancel()" style="background: var(--bg-surface); border: 1px solid var(--border-color); color: var(--text-main);">Cancel</button>
+                <button onclick="execConfirm()" style="background: var(--primary); color: white;" data-i18n="confirm_btn">Confirm</button>
+                <button onclick="execCancel()" style="background: var(--bg-surface); border: 1px solid var(--border-color); color: var(--text-main);" data-i18n="cancel_btn">Cancel</button>
             </div>
         </div>
     </div>
 
+    <!-- RESTRUCTURED BOARD SETTINGS MODAL (ĐÃ GẮN ĐA NGÔN NGỮ CHUẨN XÁC) -->
     <div id="settings-modal-overlay" class="modal-overlay">
         <div class="modal">
-            <h2>Board Settings</h2>
+            <h2 data-i18n="board_settings">Board Settings</h2>
             
-            <div class="setting-row">
-                <span class="setting-label">Show Board Header</span>
-                <label class="toggle-switch">
-                    <input type="checkbox" id="setting-header-toggle" onchange="toggleHeaderSetting(this.checked)">
-                    <span class="slider"></span>
-                </label>
-            </div>
-            
-            <div class="setting-row">
-                <span class="setting-label">Show File Name on Click</span>
-                <label class="toggle-switch">
-                    <input type="checkbox" id="setting-name-toggle" onchange="toggleFilenameSetting(this.checked)">
-                    <span class="slider"></span>
-                </label>
+            <!-- NHÓM 1: CHẾ ĐỘ & THAO TÁC -->
+            <div class="setting-section">
+                <div class="setting-section-title"><i class="ph ph-sliders"></i> <span data-i18n="section_actions">Functions & Actions</span></div>
+                
+                <div class="setting-row">
+                    <span class="setting-label" data-i18n="show_header">Show Board Header</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="setting-header-toggle" onchange="toggleHeaderSetting(this.checked)">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                
+                <div class="setting-row">
+                    <span class="setting-label" data-i18n="show_filename">Show File Name on Click</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="setting-name-toggle" onchange="toggleFilenameSetting(this.checked)">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <div class="setting-row">
+                    <span class="setting-label" style="color: var(--accent);" data-i18n="manga_mode">Manga / Anime Mode</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="setting-story-toggle" onchange="toggleStoryModeSetting(this.checked)">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <div class="setting-row">
+                    <span class="setting-label" style="color: var(--primary);" data-i18n="copy_format">Copy Name Format</span>
+                    <select id="setting-copy-mode-select" onchange="changeCopyModeSetting(this.value)" style="width: 150px; padding: 6px;">
+                        <option value="all" data-i18n="main_all_alt">Main + All Alt Names</option>
+                        <option value="first" data-i18n="main_only">Main Name Only</option>
+                        <option value="first_n" data-i18n="main_n_alt">Main + N Alt Names</option>
+                    </select>
+                </div>
+
+                <div class="setting-row" id="setting-copy-count-row" style="display: none;">
+                    <span class="setting-label" style="padding-left: 10px; font-size: 0.85rem; color: var(--text-muted);" data-i18n="num_alt_names">Number of Alt Names (N)</span>
+                    <input type="number" id="setting-copy-count-input" min="1" max="10" value="1" onchange="changeCopyCountSetting(this.value)" style="width: 60px; padding: 4px; text-align: center;">
+                </div>
             </div>
 
-            <div class="setting-row">
-                <span class="setting-label" style="color: var(--accent);">Manga / Anime Mode</span>
-                <label class="toggle-switch">
-                    <input type="checkbox" id="setting-story-toggle" onchange="toggleStoryModeSetting(this.checked)">
-                    <span class="slider"></span>
-                </label>
+            <!-- NHÓM 2: GIAO DIỆN & ĐỊNH DẠNG -->
+            <div class="setting-section">
+                <div class="setting-section-title"><i class="ph ph-paint-brush"></i> <span data-i18n="section_style">Style & Font</span></div>
+
+                <div class="setting-row">
+                    <span class="setting-label" data-i18n="image_shape">Image Shape</span>
+                    <select id="setting-shape-select" onchange="changeImageShapeSetting(this.value)" style="width: 140px; padding: 6px;">
+                        <option value="auto" data-i18n="shape_auto">Auto (Default)</option>
+                        <option value="square" data-i18n="shape_square">Square (1:1)</option>
+                        <option value="portrait" data-i18n="shape_portrait">Portrait (2:3)</option>
+                        <option value="circle" data-i18n="shape_circle">Circle</option>
+                    </select>
+                </div>
+
+                <div class="setting-row">
+                    <span class="setting-label" data-i18n="font_family">Font Family</span>
+                    <select id="setting-font-select" onchange="changeFontSetting(this.value)" style="width: 140px; padding: 6px;">
+                        <option value="0">Default Sans</option>
+                        <option value="1">Comic / Chalk</option>
+                        <option value="2">Impact / Meme</option>
+                        <option value="3">Monospace</option>
+                        <option value="4">Serif</option>
+                    </select>
+                </div>
+
+                <div class="setting-row">
+                    <span class="setting-label" data-i18n="score_precision">Score Precision</span>
+                    <select id="setting-precision-select" onchange="changeScorePrecisionSetting(this.value)" style="width: 140px; padding: 6px;">
+                        <option value="1">1 Decimal (e.g. 8.5)</option>
+                        <option value="2">2 Decimals (e.g. 8.50)</option>
+                    </select>
+                </div>
             </div>
 
-            <div class="setting-row">
-                <span class="setting-label" style="color: var(--primary);">Include Alt Name on Copy</span>
-                <label class="toggle-switch">
-                    <input type="checkbox" id="setting-copy-alt-toggle" onchange="toggleCopyAltSetting(this.checked)">
-                    <span class="slider"></span>
-                </label>
-            </div>
-            
-            <div class="setting-row">
-                <span class="setting-label">Image Shape</span>
-                <select id="setting-shape-select" onchange="changeImageShapeSetting(this.value)" style="width: 140px; padding: 8px;">
-                    <option value="auto">Auto (Default)</option>
-                    <option value="square">Square (1:1)</option>
-                    <option value="portrait">Portrait (2:3)</option>
-                    <option value="circle">Circle</option>
-                </select>
-            </div>
-
-            <div class="setting-row">
-                <span class="setting-label">Font Family</span>
-                <select id="setting-font-select" onchange="changeFontSetting(this.value)" style="width: 140px; padding: 8px;">
-                    <option value="0">Default Sans</option>
-                    <option value="1">Comic / Chalk</option>
-                    <option value="2">Impact / Meme</option>
-                    <option value="3">Monospace</option>
-                    <option value="4">Serif</option>
-                </select>
-            </div>
-
-            <div class="setting-row">
-                <span class="setting-label">Score Precision</span>
-                <select id="setting-precision-select" onchange="changeScorePrecisionSetting(this.value)" style="width: 140px; padding: 8px;">
-                    <option value="1">1 Decimal (e.g. 8.5)</option>
-                    <option value="2">2 Decimals (e.g. 8.50)</option>
-                </select>
-            </div>
-
-            <div style="margin-top: 20px;">
-                <span class="setting-label" style="display: block; margin-bottom: 10px;">Board Background</span>
-                <div style="display: flex; gap: 10px;">
-                    <button onclick="document.getElementById('bg-img-input').click()" class="tier-controls-btn" style="flex: 2;"><i class="ph ph-image"></i> Upload Image</button>
-                    <input type="color" id="setting-bg-color" onchange="setBgColor(this.value)" style="width: 40px; height: 40px; border: none; padding: 0; background: none; cursor: pointer; flex-shrink: 0;" title="Pick solid color">
+            <!-- NHÓM 3: HÌNH NỀN BẢNG -->
+            <div class="setting-section">
+                <div class="setting-section-title"><i class="ph ph-image"></i> <span data-i18n="board_bg">Board Background</span></div>
+                <div style="display: flex; gap: 10px; margin-top: 8px;">
+                    <button onclick="document.getElementById('bg-img-input').click()" class="tier-controls-btn" style="flex: 2;"><i class="ph ph-upload-simple"></i> <span data-i18n="upload_img">Upload Image</span></button>
+                    <input type="color" id="setting-bg-color" onchange="setBgColor(this.value)" style="width: 38px; height: 38px; border: none; padding: 0; background: none; cursor: pointer; flex-shrink: 0;" title="Pick solid color">
                     <button onclick="resetBackground()" class="tier-controls-btn" style="flex: 1;" title="Reset Background"><i class="ph ph-arrow-counter-clockwise"></i></button>
                 </div>
                 <input type="file" id="bg-img-input" accept="image/*" style="display: none;" onchange="handleBgImage(event)">
             </div>
 
+            <!-- NHÓM 4: XUẤT BÁO CÁO & TẢI VỀ -->
+            <div class="setting-section" style="border-color: rgba(59, 130, 246, 0.3);">
+                <div class="setting-section-title" style="color: var(--accent);"><i class="ph ph-export"></i> <span data-i18n="section_export">Export & Data</span></div>
+                <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px;">
+                    <button onclick="openExportReportModal()" class="tier-controls-btn" style="background: rgba(16, 185, 129, 0.15); color: var(--primary); border-color: rgba(16, 185, 129, 0.3); font-size: 0.9rem;"><i class="ph ph-file-text"></i> <span data-i18n="export_report_btn">Export Report & Copy All</span></button>
+                    <button onclick="downloadAllImagesAsZip()" class="tier-controls-btn" style="background: rgba(59, 130, 246, 0.15); color: var(--accent); border-color: rgba(59, 130, 246, 0.3); font-size: 0.9rem;"><i class="ph ph-file-zip"></i> <span data-i18n="download_zip">Download All Images (ZIP)</span></button>
+                </div>
+            </div>
+
+            <div class="modal-btns" style="margin-top: 15px;">
+                <button onclick="closeModal('settings-modal-overlay')" style="background: var(--bg-surface); border: 1px solid var(--border-color); color: var(--text-main);" data-i18n="close">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL XUẤT BÁO CÁO VĂN BẢN -->
+    <div id="export-report-modal-overlay" class="modal-overlay">
+        <div class="modal" style="max-width: 500px;">
+            <h2 data-i18n="export_report_title">Text Report & Copy All</h2>
+            
+            <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-weight: 600; font-size: 0.9rem;" data-i18n="scope_target">Include Images From:</span>
+                    <select id="report-opt-scope" onchange="generateReportText()" style="width: 170px; padding: 6px;">
+                        <option value="both" data-i18n="scope_both">Board & Dock</option>
+                        <option value="board" data-i18n="scope_board_only">Board Only</option>
+                        <option value="dock" data-i18n="scope_dock_only">Dock Only</option>
+                    </select>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: var(--bg-elevated); padding: 12px; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+                    <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer;">
+                        <input type="checkbox" id="report-opt-tier" checked onchange="generateReportText()">
+                        <span data-i18n="inc_tier_group">Group by Tier</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer;">
+                        <input type="checkbox" id="report-opt-score" checked onchange="generateReportText()">
+                        <span data-i18n="inc_scores">Include Scores</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer;">
+                        <input type="checkbox" id="report-opt-chap" checked onchange="generateReportText()">
+                        <span data-i18n="inc_chapters">Include Chapters</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer;">
+                        <input type="checkbox" id="report-opt-status" checked onchange="generateReportText()">
+                        <span data-i18n="inc_statuses">Include Statuses</span>
+                    </label>
+                </div>
+            </div>
+
+            <label style="display: block; font-weight: 600; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 6px;" data-i18n="report_preview">Live Preview:</label>
+            <textarea id="report-preview-textarea" readonly rows="8" style="font-family: monospace; font-size: 0.85rem; line-height: 1.4; white-space: pre; margin-bottom: 15px; resize: vertical;"></textarea>
+
             <div class="modal-btns">
-                <button onclick="downloadAllImagesAsZip()" style="background: var(--accent); color: white;"><i class="ph ph-file-zip"></i> Download All Images (ZIP)</button>
-                <button onclick="closeModal('settings-modal-overlay')" style="background: var(--bg-surface); border: 1px solid var(--border-color); color: var(--text-main);">Close</button>
+                <button onclick="copyFullReport()" style="background: var(--primary); color: white;"><i class="ph ph-copy"></i> <span data-i18n="copy_report_btn">Copy Full Report</span></button>
+                <button onclick="copyAllNamesOnly()" style="background: var(--accent); color: white;"><i class="ph ph-text-t"></i> <span data-i18n="copy_names_only_btn">Copy Names Only</span></button>
+                <button onclick="downloadReportTxt()" style="background: var(--bg-elevated); color: var(--text-main); border: 1px solid var(--border-color);"><i class="ph ph-download-simple"></i> <span data-i18n="download_txt_btn">Download .TXT</span></button>
+                <button onclick="closeModal('export-report-modal-overlay')" style="background: var(--bg-surface); border: 1px solid var(--border-color); color: var(--text-main);" data-i18n="close">Close</button>
             </div>
         </div>
     </div>
 
     <div id="rename-modal-overlay" class="modal-overlay">
         <div class="modal">
-            <h2>Rename Image</h2>
-            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 15px;">Add as many alternative names as you need for this image.</p>
+            <h2 data-i18n="rename_image">Rename Image</h2>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 15px;" data-i18n="add_alt_names_desc">Add as many alternative names as you need for this image.</p>
             
             <div id="rename-inputs-container" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px;">
-                </div>
+            </div>
             
             <button onclick="addRenameField()" style="width: 100%; padding: 12px; margin-bottom: 20px; background: transparent; border: 1px dashed var(--border-color); color: var(--text-main); border-radius: 8px; cursor: pointer; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 6px; transition: 0.2s;" onmouseover="this.style.background='var(--bg-elevated)'" onmouseout="this.style.background='transparent'">
-                <i class="ph ph-plus-circle" style="font-size: 1.2rem;"></i> Add Another Name
+                <i class="ph ph-plus-circle" style="font-size: 1.2rem;"></i> <span data-i18n="add_another_name">Add Another Name</span>
             </button>
             
             <div class="modal-btns">
-                <button onclick="saveRename()" style="background: var(--primary); color: white;">Save Names</button>
-                <button onclick="closeModal('rename-modal-overlay')" style="background: var(--bg-surface); border: 1px solid var(--border-color); color: var(--text-main);">Cancel</button>
+                <button onclick="saveRename()" style="background: var(--primary); color: white;" data-i18n="save_names">Save Names</button>
+                <button onclick="closeModal('rename-modal-overlay')" style="background: var(--bg-surface); border: 1px solid var(--border-color); color: var(--text-main);" data-i18n="cancel_btn">Cancel</button>
             </div>
         </div>
     </div>
 
     <div id="sync-modal-overlay" class="modal-overlay">
         <div class="modal">
-            <h2>P2P Data Sync</h2>
-            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 20px;">Sync data directly between 2 devices (PC <-> Mobile) via network.</p>
+            <h2 data-i18n="p2p_title">P2P Data Sync</h2>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 20px;" data-i18n="p2p_desc">Sync data directly between 2 devices (PC <-> Mobile) via network.</p>
             
             <div class="sync-box">
-                <h3><i class="ph ph-broadcast"></i> Host (Send Data)</h3>
-                <button onclick="generateSyncCode()" style="width: 100%; padding: 12px; background: var(--accent); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; margin-bottom: 10px;">Generate PIN</button>
+                <h3><i class="ph ph-broadcast"></i> <span data-i18n="host_send">Host (Send Data)</span></h3>
+                <button onclick="generateSyncCode()" style="width: 100%; padding: 12px; background: var(--accent); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; margin-bottom: 10px;" data-i18n="gen_pin">Generate PIN</button>
                 <div style="text-align: center; font-size: 2.5rem; font-weight: 800; letter-spacing: 8px; color: var(--primary);" id="sync-code-display">----</div>
                 <div id="sync-wait-msg" style="display: none; text-align: center; color: var(--warning); font-size: 0.9rem; margin-top: 10px;"></div>
             </div>
 
             <div class="sync-box">
-                <h3><i class="ph ph-download-simple"></i> Receiver (Receive Data)</h3>
-                <input type="text" id="sync-code-input" placeholder="Enter 4-digit PIN..." maxlength="4" style="text-align: center; font-size: 1.5rem; letter-spacing: 5px; margin-bottom: 10px;">
-                <button onclick="receiveSyncData()" style="width: 100%; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">Connect & Receive</button>
+                <h3><i class="ph ph-download-simple"></i> <span data-i18n="recv_receive">Receiver (Receive Data)</span></h3>
+                <input type="text" id="sync-code-input" placeholder="Enter 4-digit PIN..." data-i18n-placeholder="enter_pin" maxlength="4" style="text-align: center; font-size: 1.5rem; letter-spacing: 5px; margin-bottom: 10px;">
+                <button onclick="receiveSyncData()" style="width: 100%; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;" data-i18n="connect_receive">Connect & Receive</button>
             </div>
 
             <div class="modal-btns">
-                <button onclick="closeSyncModal()" style="background: var(--bg-surface); border: 1px solid var(--border-color); color: var(--text-main);">Close</button>
+                <button onclick="closeSyncModal()" style="background: var(--bg-surface); border: 1px solid var(--border-color); color: var(--text-main);" data-i18n="close">Close</button>
             </div>
         </div>
     </div>
 
     <div id="create-modal-overlay" class="modal-overlay">
         <div class="modal">
-            <h2>Create New Board</h2>
-            <input type="text" id="new-template-name" placeholder="Enter board name..." style="margin-bottom: 15px;" onkeypress="if(event.key==='Enter') confirmCreateList()">
+            <h2 data-i18n="create_new_board">Create New Board</h2>
+            <input type="text" id="new-template-name" placeholder="Enter board name..." data-i18n-placeholder="board_name_placeholder" style="margin-bottom: 15px;" onkeypress="if(event.key==='Enter') confirmCreateList()">
             
-            <label style="display:block; margin-bottom: 8px; font-weight: 600; color: var(--text-muted); font-size: 0.9rem;">Tier List Type:</label>
+            <label style="display:block; margin-bottom: 8px; font-weight: 600; color: var(--text-muted); font-size: 0.9rem;" data-i18n="tier_list_type">Tier List Type:</label>
             <select id="new-board-type" style="margin-bottom: 15px; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); color: var(--text-main);">
-                <option value="story">📖 Manga / Anime Tier List</option>
-                <option value="normal">⬛ Standard Tier List</option>
+                <option value="story" data-i18n="manga_tier_type">📖 Manga / Anime Tier List</option>
+                <option value="normal" data-i18n="standard_tier_type">⬛ Standard Tier List</option>
             </select>
 
-            <label style="display:block; margin-bottom: 8px; font-weight: 600; color: var(--text-muted); font-size: 0.9rem;">Choose Template Preset:</label>
+            <label style="display:block; margin-bottom: 8px; font-weight: 600; color: var(--text-muted); font-size: 0.9rem;" data-i18n="choose_preset">Choose Template Preset:</label>
             <select id="new-template-preset" style="margin-bottom: 20px;">
                 <option value="standard">Standard (S, A, B, C, D, F)</option>
                 <option value="gaming">Gaming (God, Epic, Good, Mid, Trash)</option>
@@ -346,30 +444,30 @@
             </select>
 
             <div class="modal-btns">
-                <button onclick="confirmCreateList()" style="background: var(--primary); color: white;">Create Board</button>
-                <button onclick="closeModal('create-modal-overlay')" style="background: var(--bg-surface); border: 1px solid var(--border-color); color: var(--text-main);">Cancel</button>
+                <button onclick="confirmCreateList()" style="background: var(--primary); color: white;" data-i18n="create_board_btn">Create Board</button>
+                <button onclick="closeModal('create-modal-overlay')" style="background: var(--bg-surface); border: 1px solid var(--border-color); color: var(--text-main);" data-i18n="cancel_btn">Cancel</button>
             </div>
         </div>
     </div>
 
     <div id="modal-overlay" class="modal-overlay">
         <div class="modal">
-            <h2>Edit Row</h2>
-            <label style="display:block; margin-bottom: 8px; font-weight: 600; font-size: 0.85rem; color: var(--text-muted);">Row Label</label>
+            <h2 data-i18n="edit_row">Edit Row</h2>
+            <label style="display:block; margin-bottom: 8px; font-weight: 600; font-size: 0.85rem; color: var(--text-muted);" data-i18n="row_label">Row Label</label>
             <input type="text" id="edit-name" placeholder="Name" style="margin-bottom: 15px;" onkeypress="if(event.key==='Enter') saveTierEdit()">
             
             <div style="display: flex; gap: 10px; margin-bottom: 15px;">
                 <div style="flex: 1;">
-                    <label style="display:block; margin-bottom: 8px; font-weight: 600; font-size: 0.85rem; color: var(--text-muted);">Min Score</label>
+                    <label style="display:block; margin-bottom: 8px; font-weight: 600; font-size: 0.85rem; color: var(--text-muted);" data-i18n="min_score">Min Score</label>
                     <input type="number" id="edit-min-score" step="0.01">
                 </div>
                 <div style="flex: 1;">
-                    <label style="display:block; margin-bottom: 8px; font-weight: 600; font-size: 0.85rem; color: var(--text-muted);">Max Score</label>
+                    <label style="display:block; margin-bottom: 8px; font-weight: 600; font-size: 0.85rem; color: var(--text-muted);" data-i18n="max_score">Max Score</label>
                     <input type="number" id="edit-max-score" step="0.01">
                 </div>
             </div>
 
-            <label style="display:block; margin-bottom: 8px; font-weight: 600; font-size: 0.85rem; color: var(--text-muted);">Row Color</label>
+            <label style="display:block; margin-bottom: 8px; font-weight: 600; font-size: 0.85rem; color: var(--text-muted);" data-i18n="row_color">Row Color</label>
             <div style="display: flex; gap: 10px; margin-bottom: 20px; align-items: center;">
                 <input type="color" id="edit-color-picker" style="width: 50px; height: 40px; border: none; padding: 0; background: none; cursor: pointer;">
                 <div style="display: flex; gap: 8px; flex-wrap: wrap; flex: 1;">
@@ -392,68 +490,68 @@
             </div>
 
             <div style="display: flex; gap: 8px; margin-bottom: 10px;">
-                <button class="tier-controls-btn" onclick="moveTierUp()"><i class="ph ph-arrow-up"></i> Move Up</button>
-                <button class="tier-controls-btn" onclick="moveTierDown()"><i class="ph ph-arrow-down"></i> Move Down</button>
+                <button class="tier-controls-btn" onclick="moveTierUp()"><i class="ph ph-arrow-up"></i> <span data-i18n="move_up">Move Up</span></button>
+                <button class="tier-controls-btn" onclick="moveTierDown()"><i class="ph ph-arrow-down"></i> <span data-i18n="move_down">Move Down</span></button>
             </div>
 
             <div class="modal-btns">
-                <button onclick="saveTierEdit()" style="background: var(--primary); color: white;">Save Changes</button>
-                <button onclick="deleteTier()" style="background: rgba(239, 68, 68, 0.1); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.3);"><i class="ph ph-trash"></i> Delete Row</button>
-                <button onclick="closeModal('modal-overlay')" style="background: var(--bg-surface); border: 1px solid var(--border-color); color: var(--text-main);">Cancel</button>
+                <button onclick="saveTierEdit()" style="background: var(--primary); color: white;" data-i18n="save_changes">Save Changes</button>
+                <button onclick="deleteTier()" style="background: rgba(239, 68, 68, 0.1); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.3);"><i class="ph ph-trash"></i> <span data-i18n="delete_row">Delete Row</span></button>
+                <button onclick="closeModal('modal-overlay')" style="background: var(--bg-surface); border: 1px solid var(--border-color); color: var(--text-main);" data-i18n="cancel_btn">Cancel</button>
             </div>
         </div>
     </div>
 
     <div id="caption-modal-overlay" class="modal-overlay">
         <div class="modal">
-            <h2>Add Image Note</h2>
-            <textarea id="caption-input" placeholder="Type a note or caption to display under this image..." rows="4" style="margin-bottom: 15px; resize: vertical;"></textarea>
+            <h2 data-i18n="add_note">Add Image Note</h2>
+            <textarea id="caption-input" placeholder="Type a note or caption to display under this image..." data-i18n-placeholder="note_placeholder" rows="4" style="margin-bottom: 15px; resize: vertical;"></textarea>
             <div class="modal-btns">
-                <button onclick="saveCaption()" style="background: var(--primary); color: white;">Save Note</button>
-                <button onclick="closeModal('caption-modal-overlay')" style="background: var(--bg-surface); border: 1px solid var(--border-color); color: var(--text-main);">Cancel</button>
+                <button onclick="saveCaption()" style="background: var(--primary); color: white;" data-i18n="save_note">Save Note</button>
+                <button onclick="closeModal('caption-modal-overlay')" style="background: var(--bg-surface); border: 1px solid var(--border-color); color: var(--text-main);" data-i18n="cancel_btn">Cancel</button>
             </div>
         </div>
     </div>
 
     <div id="help-modal" class="modal-overlay">
         <div class="modal">
-            <h2>Keyboard Shortcuts</h2>
+            <h2 data-i18n="shortcuts_title">Keyboard Shortcuts</h2>
             <div style="margin-top: 15px; display: flex; flex-direction: column; gap: 5px;">
-                <div class="shortcut-row"><span>Undo</span> <span><kbd>Ctrl</kbd> + <kbd>Z</kbd></span></div>
-                <div class="shortcut-row"><span>Redo</span> <span><kbd>Ctrl</kbd> + <kbd>Y</kbd></span></div>
-                <div class="shortcut-row"><span>Manual Save</span> <span><kbd>Ctrl</kbd> + <kbd>S</kbd></span></div>
-                <div class="shortcut-row"><span>Delete Selected Image</span> <span><kbd>Del</kbd> / <kbd>Backspace</kbd></span></div>
-                <div class="shortcut-row" style="border: none;"><span>Deselect / Close Modal</span> <span><kbd>Esc</kbd></span></div>
+                <div class="shortcut-row"><span data-i18n="shortcut_undo">Undo</span> <span><kbd>Ctrl</kbd> + <kbd>Z</kbd></span></div>
+                <div class="shortcut-row"><span data-i18n="shortcut_redo">Redo</span> <span><kbd>Ctrl</kbd> + <kbd>Y</kbd></span></div>
+                <div class="shortcut-row"><span data-i18n="shortcut_save">Manual Save</span> <span><kbd>Ctrl</kbd> + <kbd>S</kbd></span></div>
+                <div class="shortcut-row"><span data-i18n="shortcut_del">Delete Selected Image</span> <span><kbd>Del</kbd> / <kbd>Backspace</kbd></span></div>
+                <div class="shortcut-row" style="border: none;"><span data-i18n="shortcut_esc">Deselect / Close Modal</span> <span><kbd>Esc</kbd></span></div>
             </div>
             <div class="modal-btns">
-                <button onclick="closeModal('help-modal')" style="background: var(--primary); color: white;">Got it!</button>
+                <button onclick="closeModal('help-modal')" style="background: var(--primary); color: white;" data-i18n="got_it">Got it!</button>
             </div>
         </div>
     </div>
 
     <div id="backup-modal-overlay" class="modal-overlay">
         <div class="modal">
-            <h2>Files & Backup</h2>
-            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 15px;">Backup all your data to a JSON file for safe keeping or transferring to another device.</p>
+            <h2 data-i18n="files_backup_title">Files & Backup</h2>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 15px;" data-i18n="backup_desc">Backup all your data to a JSON file for safe keeping or transferring to another device.</p>
             <div class="modal-btns">
-                <button onclick="exportDataV2()" style="background: var(--accent); color: white;"><i class="ph ph-export"></i> Export All Data (JSON)</button>
+                <button onclick="exportDataV2()" style="background: var(--accent); color: white;"><i class="ph ph-export"></i> <span data-i18n="export_data">Export All Data (JSON)</span></button>
                 
-                <button onclick="document.getElementById('import-file-v2').click()" style="background: var(--primary); color: white;"><i class="ph ph-download-simple"></i> Import Data</button>
+                <button onclick="document.getElementById('import-file-v2').click()" style="background: var(--primary); color: white;"><i class="ph ph-download-simple"></i> <span data-i18n="import_data">Import Data</span></button>
                 <input type="file" id="import-file-v2" accept=".json" style="display: none;" onchange="importDataV2(event)">
                 
                 <div style="height: 1px; background: var(--border-color); margin: 10px 0;"></div>
                 
-                <button onclick="wipeAllDataV2()" style="background: rgba(239, 68, 68, 0.1); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.3);"><i class="ph ph-warning-octagon"></i> Wipe All Data</button>
-                <button onclick="closeModal('backup-modal-overlay')" style="background: var(--bg-surface); border: 1px solid var(--border-color); color: var(--text-main);">Close</button>
+                <button onclick="wipeAllDataV2()" style="background: rgba(239, 68, 68, 0.1); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.3);"><i class="ph ph-warning-octagon"></i> <span data-i18n="wipe_all_data">Wipe All Data</span></button>
+                <button onclick="closeModal('backup-modal-overlay')" style="background: var(--bg-surface); border: 1px solid var(--border-color); color: var(--text-main);" data-i18n="close">Close</button>
             </div>
         </div>
     </div>
     
-    <script src="js/store.js?v=4"></script>
-    <script src="js/ui.js?v=4"></script>
-    <script src="js/sync.js?v=4"></script>
-    <script src="js/files.js?v=4"></script>
-    <script src="js/dragdrop.js?v=4"></script>
-    <script src="js/board.js?v=4"></script>
+    <script src="js/store.js?v=5"></script>
+    <script src="js/ui.js?v=5"></script>
+    <script src="js/sync.js?v=5"></script>
+    <script src="js/files.js?v=5"></script>
+    <script src="js/dragdrop.js?v=5"></script>
+    <script src="js/board.js?v=5"></script>
 </body>
 </html>
