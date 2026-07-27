@@ -10,7 +10,11 @@ window.onload = () => {
         if(typeof loadMenu === 'function') loadMenu(); 
         
         const style = document.createElement('style');
-        style.innerHTML = `body.show-status-mode .chapter-badge { display: flex !important; } .chapter-badge { display: none; }`;
+        style.innerHTML = `
+            body.show-status-mode .chapter-badge { display: flex !important; } 
+            .chapter-badge { display: none; }
+            body.board-locked .img-wrap, body.board-locked .tier-label-wrap { cursor: not-allowed !important; }
+        `;
         document.head.appendChild(style);
 
         if (!isShowScoreMode) document.body.classList.add('hide-scores');
@@ -50,13 +54,15 @@ function applyStoryModeUI() {
     
     const floatStatus = document.getElementById('float-status');
     if(floatStatus) floatStatus.style.display = isStory ? 'inline-block' : 'none';
-    const floatChapWrap = document.getElementById('float-chapter-wrap');
     
     const searchCol = document.getElementById('menu-col-search');
     if(searchCol) searchCol.style.display = isStory ? 'flex' : 'none';
     
     const bulkStatus = document.getElementById('bulk-status-select');
     if(bulkStatus) bulkStatus.style.display = isStory ? 'inline-block' : 'none';
+
+    const dockStatusFilter = document.getElementById('dock-status-filter');
+    if(dockStatusFilter) dockStatusFilter.style.display = isStory ? 'inline-block' : 'none';
     
     if(!isStory && isShowStatusMode) toggleStatusMode();
 }
@@ -106,14 +112,14 @@ function renderBoard() {
             row.draggable = false; 
             
             row.ondragover = e => { 
-                if (isDragMode && draggedRowIdx !== null) { 
+                if (isDragMode && !isLockScoreMode && draggedRowIdx !== null) { 
                     e.preventDefault(); e.stopPropagation(); 
                     e.currentTarget.style.borderTop = "3px solid #10b981"; 
                 } 
             };
             row.ondragleave = e => { if (isDragMode && draggedRowIdx !== null) e.currentTarget.style.borderTop = ""; };
             row.ondrop = e => { 
-                if (isDragMode && draggedRowIdx !== null) { 
+                if (isDragMode && !isLockScoreMode && draggedRowIdx !== null) { 
                     e.preventDefault(); e.stopPropagation(); 
                     e.currentTarget.style.borderTop = ""; 
                     const tmp = currentListData.tiers.splice(draggedRowIdx, 1)[0]; 
@@ -128,11 +134,11 @@ function renderBoard() {
             labelWrap.title = "Drag to reorder row. Click to edit.";
             labelWrap.onclick = () => { if(typeof openEditModal === 'function') openEditModal(i); };
             
-            if(isDragMode) labelWrap.draggable = true; 
+            if(isDragMode && !isLockScoreMode) labelWrap.draggable = true; 
             else labelWrap.style.cursor = 'pointer';
 
             labelWrap.ondragstart = e => { 
-                if(!isDragMode) return; 
+                if(!isDragMode || isLockScoreMode) { e.preventDefault(); return; }
                 draggedRowIdx = i; draggedItem = null; e.dataTransfer.effectAllowed = 'move'; 
             }; 
             
@@ -146,7 +152,7 @@ function renderBoard() {
             
             content.ondragover = e => { 
                 e.preventDefault(); 
-                if (isDragMode && draggedItem && draggedItem.type !== 'row') { 
+                if (isDragMode && !isLockScoreMode && draggedItem && draggedItem.type !== 'row') { 
                     e.dataTransfer.dropEffect = 'move'; 
                     if (currentPlaceholder && typeof getInsertionNode === 'function') {
                         const afterElement = getInsertionNode(content, e.clientX, e.clientY);
@@ -160,6 +166,7 @@ function renderBoard() {
             
             content.ondrop = e => { 
                 e.preventDefault(); e.stopPropagation(); 
+                if (isLockScoreMode) return;
                 try {
                     if (isDragMode && draggedItem && draggedItem.type !== 'row' && draggedItem.data) { 
                         let dropIndex = currentListData.tiers[i].items.length;
@@ -205,7 +212,7 @@ function renderBoard() {
         
         dock.ondragover = e => { 
             e.preventDefault(); 
-            if(isDragMode && draggedItem && draggedItem.type !== 'row') {
+            if(isDragMode && !isLockScoreMode && draggedItem && draggedItem.type !== 'row') {
                 e.dataTransfer.dropEffect = 'move'; 
                 if (currentPlaceholder && typeof getInsertionNode === 'function') {
                     const afterElement = getInsertionNode(dock, e.clientX, e.clientY);
@@ -218,6 +225,7 @@ function renderBoard() {
         };
         dock.ondrop = e => { 
             e.preventDefault(); e.stopPropagation(); 
+            if (isLockScoreMode) return;
             try {
                 if (isDragMode && draggedItem && draggedItem.type !== 'row' && draggedItem.data) { 
                     let dropIndex = currentListData.dock.length;
@@ -243,7 +251,7 @@ function renderBoard() {
         };
         
         currentListData.dock.forEach((img, idx) => dock.appendChild(createImg(img, 'dock', null, idx)));
-        if (typeof filterDock === 'function') filterDock();
+        if (typeof filterAllImages === 'function') filterAllImages();
     } catch (err) { if(typeof showToast === 'function') showToast("UI Render Error", true); console.error(err); }
 }
 
@@ -270,11 +278,28 @@ function refreshFloatImageTitle() {
     }
 }
 
+function getFormattedCopyName(data) {
+    let names = data.names || [];
+    if (names.length === 0) return '';
+    
+    let mode = currentListData.copyNameMode || (currentListData.copyIncludesAlt === false ? 'first' : 'all');
+    let count = parseInt(currentListData.copyNameCount) || 1;
+    
+    if (mode === 'first' || names.length === 1) {
+        return names[0];
+    }
+    if (mode === 'first_n') {
+        let extra = names.slice(1, 1 + count);
+        if (extra.length === 0) return names[0];
+        return names[0] + " (" + extra.join(" - ") + ")";
+    }
+    return names[0] + " (" + names.slice(1).join(" - ") + ")";
+}
+
 function createImg(data, type, r, i) {
     const wrap = document.createElement('div'); wrap.className = 'img-wrap'; 
     wrap.style.height = (type==='tier' ? data.h : 85) + 'px';
     
-    // Tương thích ngược: Gộp dữ liệu cũ vào mảng names mới
     if (!data.names) {
         data.names = [];
         if (data.name) data.names.push(data.name);
@@ -284,7 +309,7 @@ function createImg(data, type, r, i) {
 
     let mainName = data.names.length > 0 ? data.names[0] : '';
     if (/\.(png|jpe?g|webp|gif|svg)$/i.test(mainName)) mainName = mainName.replace(/\.[^/.]+$/, "");
-    if (data.names.length > 0) data.names[0] = mainName; // Lưu lại tên đã xóa đuôi mở rộng
+    if (data.names.length > 0) data.names[0] = mainName; 
 
     wrap.setAttribute('data-raw-name', mainName);
     wrap.dataset.name = data.names.join(" ").toLowerCase();
@@ -307,7 +332,7 @@ function createImg(data, type, r, i) {
     
     wrap.setAttribute('data-name-tooltip', `${tooltipName}\n⭐ ${scoreStr}${chapterStr}`); 
     
-    if(isDragMode) wrap.draggable = true; else wrap.style.cursor = 'pointer';
+    if(isDragMode && !isLockScoreMode) wrap.draggable = true; else wrap.style.cursor = 'pointer';
     
     const img = document.createElement('img'); img.src = data.src; img.className = 'img-item'; 
     wrap.appendChild(img);
@@ -354,27 +379,16 @@ function createImg(data, type, r, i) {
         e.stopPropagation(); 
         
         if (isNameCopyMode) {
-            let namesToCopy = data.names || [];
-            let finalCopy = namesToCopy.length > 0 ? namesToCopy[0] : '';
-            
-            if (currentListData.copyIncludesAlt !== false && namesToCopy.length > 1) {
-                finalCopy += " (" + namesToCopy.slice(1).join(" - ") + ")";
-            }
+            let finalCopy = getFormattedCopyName(data);
 
             if (finalCopy) {
                 navigator.clipboard.writeText(finalCopy).then(() => {
-                    if(typeof showToast === 'function') showToast(`Copied: ${finalCopy}`);
+                    if(typeof showToast === 'function') showToast(`${t('toast_copied')}${finalCopy}`);
                 }).catch(() => { if(typeof showToast === 'function') showToast("Failed to copy!", true); });
-            } else { if(typeof showToast === 'function') showToast("Ảnh chưa có tên!", true); }
+            } else { if(typeof showToast === 'function') showToast(t('toast_no_name'), true); }
             
             if (selectedImgObj && selectedImgObj.dom !== wrap && typeof deselectImg === 'function') deselectImg();
             return;
-        }
-        
-        if (isLockScoreMode) {
-            data.locked = !data.locked;
-            if (data.locked) wrap.setAttribute('data-locked', 'true'); else wrap.removeAttribute('data-locked');
-            commitChangeSilent(); return;
         }
 
         if (isMultiSelectMode) {
@@ -425,6 +439,12 @@ function createImg(data, type, r, i) {
         } else if (selectedImgObj.dom === wrap) { 
             if(typeof deselectImg === 'function') deselectImg(); 
         } else {
+            if (isLockScoreMode) {
+                if(typeof showToast === 'function') showToast(t('toast_locked'), true);
+                deselectImg();
+                return;
+            }
+
             let sourceData = selectedImgObj.data;
             let targetData = data;
             
@@ -460,7 +480,12 @@ function createImg(data, type, r, i) {
     };
     
     wrap.ondragstart = e => { 
-        if(!isDragMode || isMultiSelectMode || isLockScoreMode) return; 
+        if (isLockScoreMode) {
+            e.preventDefault();
+            if(typeof showToast === 'function') showToast(t('toast_locked'), true);
+            return;
+        }
+        if(!isDragMode || isMultiSelectMode) return; 
         e.stopPropagation(); 
         draggedItem = {data, type, r, i}; 
         e.dataTransfer.effectAllowed = 'move'; 
@@ -494,7 +519,7 @@ function initKeyboardShortcuts() {
         if (e.ctrlKey || e.metaKey) { 
             if (e.key.toLowerCase() === 'z') { e.preventDefault(); if (!document.getElementById('editor-screen').classList.contains('hidden')) { undo(); } else { if(typeof undoMenuAction === 'function') undoMenuAction(); } } 
             if (e.key.toLowerCase() === 'y') { e.preventDefault(); if (!document.getElementById('editor-screen').classList.contains('hidden')) redo(); } 
-            if (e.key.toLowerCase() === 's') { e.preventDefault(); if (currentListData) { saveListSilent(currentListData); if(typeof showToast==='function') showToast('Saved manually!'); isDirty = false; } } 
+            if (e.key.toLowerCase() === 's') { e.preventDefault(); if (currentListData) { saveListSilent(currentListData); if(typeof showToast==='function') showToast(t('toast_saved')); isDirty = false; } } 
         } 
         if (e.key === 'Delete' || e.key === 'Backspace') { if (selectedImgObj) { e.preventDefault(); deleteSelected(); } } 
         if (e.key === 'Escape') { 
@@ -513,16 +538,22 @@ function toggleDragMode() {
     isDragMode = !isDragMode;
     const btn = document.getElementById('btn-drag-toggle');
     if (isDragMode) {
-        btn.innerHTML = '<i class="ph ph-hand-grabbing"></i> Drag: ON';
+        btn.innerHTML = `<i class="ph ph-hand-grabbing"></i> ${t('drag_on')}`;
         btn.className = 'btn-icon active';
         document.body.classList.remove('scroll-mode');
         document.querySelectorAll('.img-wrap, .tier-row').forEach(el => {
             if(el.classList.contains('tier-row')) el.removeAttribute('draggable');
-            else { el.setAttribute('draggable', 'true'); el.style.cursor = 'grab'; }
+            else { 
+                if(!isLockScoreMode) el.setAttribute('draggable', 'true'); 
+                el.style.cursor = 'grab'; 
+            }
         });
-        document.querySelectorAll('.tier-label-wrap').forEach(el => { el.setAttribute('draggable', 'true'); el.style.cursor = 'grab'; });
+        document.querySelectorAll('.tier-label-wrap').forEach(el => { 
+            if(!isLockScoreMode) el.setAttribute('draggable', 'true'); 
+            el.style.cursor = 'grab'; 
+        });
     } else {
-        btn.innerHTML = '<i class="ph ph-arrows-out-line-vertical"></i> Scroll: ON';
+        btn.innerHTML = `<i class="ph ph-arrows-out-line-vertical"></i> ${t('scroll_on')}`;
         btn.className = 'btn-icon';
         document.body.classList.add('scroll-mode');
         document.querySelectorAll('.img-wrap, .tier-row, .tier-label-wrap').forEach(el => { el.removeAttribute('draggable'); el.style.cursor = 'pointer'; });
@@ -533,15 +564,30 @@ function toggleLockScoreMode() {
     isLockScoreMode = !isLockScoreMode;
     const btn = document.getElementById('btn-lock-score');
     if (isLockScoreMode) {
-        btn.innerHTML = '<i class="ph ph-lock-key"></i> Lock: ON';
+        btn.innerHTML = `<i class="ph ph-lock-key"></i> ${t('lock_on')}`;
         btn.className = 'btn-icon active';
-        btn.style.background = 'rgba(239, 68, 68, 0.1)'; btn.style.color = 'var(--danger)'; btn.style.borderColor = 'rgba(239, 68, 68, 0.3)';
-        document.body.classList.add('lock-score-mode'); if(typeof deselectImg==='function') deselectImg();
+        btn.style.background = 'rgba(239, 68, 68, 0.1)'; 
+        btn.style.color = 'var(--danger)'; 
+        btn.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+        document.body.classList.add('lock-score-mode', 'board-locked'); 
+        
+        document.querySelectorAll('.img-wrap, .tier-label-wrap').forEach(el => el.removeAttribute('draggable'));
+
+        if(typeof deselectImg==='function') deselectImg();
+        if(typeof showToast==='function') showToast(t('toast_locked_board'));
     } else {
-        btn.innerHTML = '<i class="ph ph-lock-key-open"></i> Lock: OFF';
+        btn.innerHTML = `<i class="ph ph-lock-key-open"></i> ${t('lock_off')}`;
         btn.className = 'btn-icon';
-        btn.style.background = 'var(--bg-elevated)'; btn.style.color = 'var(--text-main)'; btn.style.borderColor = 'var(--border-color)';
-        document.body.classList.remove('lock-score-mode');
+        btn.style.background = 'var(--bg-elevated)'; 
+        btn.style.color = 'var(--text-main)'; 
+        btn.style.borderColor = 'var(--border-color)';
+        document.body.classList.remove('lock-score-mode', 'board-locked');
+
+        if (isDragMode) {
+            document.querySelectorAll('.img-wrap, .tier-label-wrap').forEach(el => el.setAttribute('draggable', 'true'));
+        }
+
+        if(typeof showToast==='function') showToast(t('toast_unlocked_board'));
     }
 }
 
@@ -549,13 +595,13 @@ function toggleNameCopyMode() {
     isNameCopyMode = !isNameCopyMode;
     const btn = document.getElementById('btn-name-copy');
     if (isNameCopyMode) {
-        btn.innerHTML = '<i class="ph ph-text-t"></i> Name: ON';
+        btn.innerHTML = `<i class="ph ph-text-t"></i> ${t('name_on')}`;
         btn.className = 'btn-icon active';
         btn.style.background = 'rgba(59, 130, 246, 0.1)'; btn.style.color = 'var(--accent)'; btn.style.borderColor = 'rgba(59, 130, 246, 0.3)';
         document.body.classList.add('name-copy-mode'); if(typeof deselectImg==='function') deselectImg(); 
-        if(typeof showToast==='function') showToast("Click on an image to copy its name!");
+        if(typeof showToast==='function') showToast(currentLang==='vi'?"Bấm vào ảnh để copy tên!":"Click an image to copy name!");
     } else {
-        btn.innerHTML = '<i class="ph ph-text-t"></i> Name: OFF';
+        btn.innerHTML = `<i class="ph ph-text-t"></i> ${t('name_off')}`;
         btn.className = 'btn-icon';
         btn.style.background = 'var(--bg-elevated)'; btn.style.color = 'var(--text-main)'; btn.style.borderColor = 'var(--border-color)';
         document.body.classList.remove('name-copy-mode');
@@ -566,14 +612,14 @@ function toggleScoreMode() {
     isShowScoreMode = !isShowScoreMode;
     const btn = document.getElementById('btn-score-toggle');
     if (isShowScoreMode) {
-        btn.innerHTML = '<i class="ph ph-star"></i> Score: ON';
+        btn.innerHTML = `<i class="ph ph-star"></i> ${t('score_on')}`;
         btn.classList.add('active');
         btn.style.background = 'rgba(245, 158, 11, 0.1)';
         btn.style.color = 'var(--warning)';
         btn.style.borderColor = 'rgba(245, 158, 11, 0.3)';
         document.body.classList.remove('hide-scores');
     } else {
-        btn.innerHTML = '<i class="ph ph-star"></i> Score: OFF';
+        btn.innerHTML = `<i class="ph ph-star"></i> ${t('score_off')}`;
         btn.classList.remove('active');
         btn.style.background = 'var(--bg-elevated)';
         btn.style.color = 'var(--text-main)';
@@ -586,14 +632,14 @@ function toggleStatusMode() {
     isShowStatusMode = !isShowStatusMode;
     const btn = document.getElementById('btn-status-toggle');
     if (isShowStatusMode) {
-        btn.innerHTML = '<i class="ph ph-bookmark"></i> Status: ON';
+        btn.innerHTML = `<i class="ph ph-bookmark"></i> ${t('status_on')}`;
         btn.classList.add('active');
         btn.style.background = 'rgba(59, 130, 246, 0.1)';
         btn.style.color = 'var(--accent)';
         btn.style.borderColor = 'rgba(59, 130, 246, 0.3)';
         document.body.classList.add('show-status-mode');
     } else {
-        btn.innerHTML = '<i class="ph ph-bookmark"></i> Status: OFF';
+        btn.innerHTML = `<i class="ph ph-bookmark"></i> ${t('status_off')}`;
         btn.classList.remove('active');
         btn.style.background = 'var(--bg-elevated)';
         btn.style.color = 'var(--text-main)';
@@ -614,18 +660,65 @@ function toggleDock() {
 
 function sortDock(type) {
     if (!currentListData || type === '') return;
+    if (isLockScoreMode) {
+        if(typeof showToast==='function') showToast(t('toast_locked_sort'), true);
+        document.getElementById('dock-sort-select').value = '';
+        return;
+    }
     if (type === 'az') currentListData.dock.sort((a, b) => (a.names?.[0] || a.name || '').localeCompare(b.names?.[0] || b.name || ''));
     else if (type === 'za') currentListData.dock.sort((a, b) => (b.names?.[0] || b.name || '').localeCompare(a.names?.[0] || a.name || ''));
     else if (type === 'random') currentListData.dock.sort(() => Math.random() - 0.5);
     else if (type === 'newest') currentListData.dock.reverse();
     document.getElementById('dock-sort-select').value = ''; commitChange(); 
-    if(typeof showToast==='function') showToast("Dock Sorted!");
+    if(typeof showToast==='function') showToast(currentLang==='vi'?"Đã sắp xếp Dock!":"Dock Sorted!");
 }
 
-function filterDock() {
-    const query = document.getElementById('dock-search').value.toLowerCase();
-    const dockItems = document.getElementById('dock').querySelectorAll('.img-wrap');
-    dockItems.forEach(wrap => { wrap.style.display = (wrap.dataset.name || '').includes(query) ? 'flex' : 'none'; });
+function filterDock() { filterAllImages(); }
+
+function filterAllImages() {
+    const searchInput = document.getElementById('dock-search');
+    const statusSelect = document.getElementById('dock-status-filter');
+    
+    const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
+    const statusFilter = statusSelect ? statusSelect.value : '';
+
+    const matchItem = (wrap) => {
+        const name = (wrap.dataset.name || '').toLowerCase();
+        const status = wrap.getAttribute('data-status') || 'none';
+
+        const matchesQuery = !query || name.includes(query);
+        let matchesStatus = true;
+
+        if (statusFilter === 'has-status') {
+            matchesStatus = status !== 'none';
+        } else if (statusFilter) {
+            matchesStatus = status === statusFilter;
+        }
+
+        return matchesQuery && matchesStatus;
+    };
+
+    const dockItems = document.querySelectorAll('#dock .img-wrap');
+    dockItems.forEach(wrap => {
+        wrap.style.display = matchItem(wrap) ? 'flex' : 'none';
+    });
+
+    const boardItems = document.querySelectorAll('#tier-board .img-wrap');
+    boardItems.forEach(wrap => {
+        if (!query && !statusFilter) {
+            wrap.style.opacity = '1';
+            wrap.style.filter = 'none';
+            wrap.style.pointerEvents = 'auto';
+        } else if (matchItem(wrap)) {
+            wrap.style.opacity = '1';
+            wrap.style.filter = 'drop-shadow(0 0 6px var(--primary))';
+            wrap.style.pointerEvents = 'auto';
+        } else {
+            wrap.style.opacity = '0.25';
+            wrap.style.filter = 'grayscale(80%)';
+            wrap.style.pointerEvents = 'none';
+        }
+    });
 }
 
 // ==========================================
@@ -637,12 +730,12 @@ function toggleMultiSelectMode() {
     const btn = document.getElementById('btn-multi-select');
     
     if (isMultiSelectMode) {
-        btn.innerHTML = '<i class="ph ph-check-square"></i> Select: ON'; btn.classList.add('active');
+        btn.innerHTML = `<i class="ph ph-check-square"></i> ${t('select_on')}`; btn.classList.add('active');
         if(typeof deselectImg === 'function') deselectImg(); 
         updateBulkUI(); 
-        if(typeof showToast==='function') showToast("Multi-select ON. Click images to select.");
+        if(typeof showToast==='function') showToast(currentLang==='vi'?"Đã bật Chọn Nhiều! Bấm vào các ảnh để chọn.":"Multi-select ON. Click images to select.");
     } else {
-        btn.innerHTML = '<i class="ph ph-check-square"></i> Select: OFF'; btn.classList.remove('active');
+        btn.innerHTML = `<i class="ph ph-check-square"></i> ${t('select_off')}`; btn.classList.remove('active');
         multiSelectImages = []; renderBoard(); updateBulkUI();
     }
 }
@@ -667,7 +760,7 @@ function updateBulkUI() {
     
     if (isMultiSelectMode) {
         bar.classList.add('show');
-        count.innerHTML = `<i class="ph ph-check-square"></i> ${multiSelectImages.length} Selected`;
+        count.innerHTML = `<i class="ph ph-check-square"></i> ${multiSelectImages.length} ${t('selected')}`;
         document.getElementById('main-bottom-toolbar').style.transform = 'translateX(-50%) translateY(150px)';
     } else {
         bar.classList.remove('show');
@@ -676,7 +769,7 @@ function updateBulkUI() {
 
     let totalImages = 0;
     if (currentListData) { totalImages = currentListData.dock.length; currentListData.tiers.forEach(t => totalImages += t.items.length); }
-    if (btnSelectAll) btnSelectAll.innerHTML = (multiSelectImages.length === totalImages && totalImages > 0) ? '<i class="ph ph-x-square"></i> Deselect All' : '<i class="ph ph-check-square-offset"></i> Select All';
+    if (btnSelectAll) btnSelectAll.innerHTML = (multiSelectImages.length === totalImages && totalImages > 0) ? `<i class="ph ph-x-square"></i> ${t('deselect_all')}` : `<i class="ph ph-check-square-offset"></i> ${t('select_all')}`;
 }
 
 function bulkToggleLock() {
@@ -684,11 +777,15 @@ function bulkToggleLock() {
     const newState = !multiSelectImages.every(obj => obj.data.locked);
     multiSelectImages.forEach(obj => obj.data.locked = newState);
     commitChangeSilent(); renderBoard(); 
-    if(typeof showToast==='function') showToast(newState ? "Locked selected images!" : "Unlocked selected images!");
+    if(typeof showToast==='function') showToast(newState ? (currentLang==='vi'?"Đã khóa các ảnh chọn!":"Locked selected images!") : (currentLang==='vi'?"Đã mở khóa các ảnh chọn!":"Unlocked selected images!"));
 }
 
 function bulkMoveToDock() {
     if (multiSelectImages.length === 0) return;
+    if (isLockScoreMode) {
+        if(typeof showToast==='function') showToast(t('toast_locked'), true);
+        return;
+    }
     multiSelectImages.forEach(obj => { if (obj.type === 'tier') currentListData.dock.push(obj.data); });
     currentListData.tiers.forEach(t => t.items = t.items.filter(item => !multiSelectImages.some(sel => sel.data === item)));
     multiSelectImages = []; toggleMultiSelectMode(); commitChange();
@@ -697,7 +794,7 @@ function bulkMoveToDock() {
 function bulkDelete() {
     if (multiSelectImages.length === 0) return;
     if(typeof openConfirm === 'function') {
-        openConfirm("Bulk Delete", `Delete ${multiSelectImages.length} selected images?`, () => {
+        openConfirm(t('confirm_title'), `${t('are_you_sure')} (${multiSelectImages.length})`, () => {
             currentListData.dock = currentListData.dock.filter(item => !multiSelectImages.some(sel => sel.data === item));
             currentListData.tiers.forEach(t => t.items = t.items.filter(item => !multiSelectImages.some(sel => sel.data === item)));
             multiSelectImages = []; toggleMultiSelectMode(); commitChange();
@@ -709,7 +806,7 @@ function bulkChangeStatus(val) {
     if (multiSelectImages.length === 0 || !val) return;
     multiSelectImages.forEach(obj => { obj.data.readStatus = val === 'none' ? 'none' : val; });
     commitChangeSilent(); renderBoard(); 
-    if(typeof showToast==='function') showToast("Bulk status updated!");
+    if(typeof showToast==='function') showToast(currentLang==='vi'?"Đã cập nhật trạng thái!":"Bulk status updated!");
     document.getElementById('bulk-status-select').value = ''; 
 }
 
@@ -798,11 +895,11 @@ function downloadSelectedImage() {
 }
 
 // ==========================================
-// RENAME ĐỘNG (KHÔNG GIỚI HẠN)
+// RENAME ĐỘNG & TỰ ĐỘNG LẤY TÊN TỪ MYANIMELIST
 // ==========================================
 function openRenameModal() {
     if (!selectedImgObj) {
-        if(typeof showToast === 'function') showToast("Vui lòng chọn một ảnh trước!", true);
+        if(typeof showToast === 'function') showToast(currentLang==='vi'?"Vui lòng chọn một ảnh trước!":"Please select an image first!", true);
         return;
     }
     
@@ -814,6 +911,17 @@ function openRenameModal() {
     if(names.length === 0) names.push(''); 
 
     names.forEach((n, idx) => addRenameField(n, idx === 0));
+
+    // DỰ PHÒNG TỐI ƯU UX: TỰ ĐỘNG BƠM NÚT "AUTO-FETCH" VÀO MODAL
+    let fetchBtn = document.getElementById('btn-auto-fetch-names');
+    if (!fetchBtn) {
+        fetchBtn = document.createElement('button');
+        fetchBtn.id = 'btn-auto-fetch-names';
+        fetchBtn.style.cssText = "width: 100%; padding: 10px; margin-bottom: 10px; background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.4); color: var(--accent); border-radius: 8px; cursor: pointer; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 6px; transition: 0.2s;";
+        fetchBtn.onclick = autoFetchMetadataForRename;
+        container.parentNode.insertBefore(fetchBtn, container.nextSibling);
+    }
+    fetchBtn.innerHTML = `<i class="ph ph-sparkle"></i> ${t('fetch_metadata_btn', '⚡ Auto-Fetch Titles (MyAnimeList)')}`;
 
     document.getElementById('rename-modal-overlay').style.display = 'flex';
     
@@ -828,6 +936,31 @@ function openRenameModal() {
     }
 }
 
+async function autoFetchMetadataForRename() {
+    const firstInput = document.querySelector('.dynamic-rename-input');
+    const query = firstInput ? firstInput.value.trim() : '';
+    if (!query) {
+        if(typeof showToast === 'function') showToast(currentLang==='vi'?"Vui lòng nhập tên chính trước khi tìm!":"Please enter a main name first!", true);
+        return;
+    }
+
+    if(typeof showLoading === 'function') showLoading(currentLang==='vi'?"Đang tìm tên từ MyAnimeList...":"Fetching titles from MyAnimeList...");
+    
+    const meta = await fetchJikanMetadata(query, searchType || 'manga');
+    if(typeof hideLoading === 'function') hideLoading();
+
+    if (meta && meta.names.length > 0) {
+        const container = document.getElementById('rename-inputs-container');
+        if (container) {
+            container.innerHTML = '';
+            meta.names.forEach((n, idx) => addRenameField(n, idx === 0));
+        }
+        if(typeof showToast === 'function') showToast(currentLang==='vi' ? `Đã tìm thấy ${meta.names.length} tên chính chủ & tên phụ!` : `Fetched ${meta.names.length} official titles!`);
+    } else {
+        if(typeof showToast === 'function') showToast(currentLang==='vi'?"Không tìm thấy thông tin trên MyAnimeList!":"No title info found on MyAnimeList!", true);
+    }
+}
+
 function addRenameField(val = '', isMain = false) {
     const container = document.getElementById('rename-inputs-container');
     if(!container) return;
@@ -838,9 +971,9 @@ function addRenameField(val = '', isMain = false) {
     
     const input = document.createElement('input');
     input.type = 'text';
-    input.className = 'dynamic-rename-input'; // class để lặp khi save
+    input.className = 'dynamic-rename-input'; 
     input.value = val;
-    input.placeholder = isMain ? "Main Name..." : "Alternative Name...";
+    input.placeholder = isMain ? (currentLang==='vi'?"Tên chính...":"Main Name...") : (currentLang==='vi'?"Tên phụ...":"Alternative Name...");
     input.style.flex = '1';
     input.onkeypress = (e) => {
         if(e.key === 'Enter') {
@@ -881,7 +1014,6 @@ function saveRename() {
     
     selectedImgObj.data.names = newNames;
     
-    // Dọn dẹp trường cũ nếu còn sót
     delete selectedImgObj.data.name;
     delete selectedImgObj.data.altName;
     delete selectedImgObj.data.extraName;
@@ -905,20 +1037,18 @@ function saveRename() {
     if(typeof closeModal==='function') closeModal('rename-modal-overlay'); 
     if(typeof deselectImg === 'function') deselectImg(); 
     commitChange(); 
-    if(typeof showToast==='function') showToast("Đã lưu tên!");
+    if(typeof showToast==='function') showToast(t('toast_names_saved'));
 }
 
 async function copyImageName() {
     if (!selectedImgObj) return;
-    let namesToCopy = selectedImgObj.data.names || [];
-    let finalCopy = namesToCopy.length > 0 ? namesToCopy[0] : '';
-    
-    if (currentListData.copyIncludesAlt !== false && namesToCopy.length > 1) {
-        finalCopy += " (" + namesToCopy.slice(1).join(" - ") + ")";
-    }
+    let finalCopy = getFormattedCopyName(selectedImgObj.data);
 
-    if (!finalCopy) { if(typeof showToast==='function') showToast("Ảnh chưa có tên!", true); return; }
-    try { await navigator.clipboard.writeText(finalCopy); if(typeof showToast==='function') showToast("Đã copy tên!"); } 
+    if (!finalCopy) { if(typeof showToast==='function') showToast(t('toast_no_name'), true); return; }
+    try { 
+        await navigator.clipboard.writeText(finalCopy); 
+        if(typeof showToast==='function') showToast(`${t('toast_copied')}${finalCopy}`); 
+    } 
     catch (err) { if(typeof showToast==='function') showToast("Failed to copy!", true); }
 }
 
@@ -937,7 +1067,7 @@ function clearImageName() {
 
     if(typeof deselectImg === 'function') deselectImg(); 
     commitChange(); 
-    if(typeof showToast==='function') showToast("Đã xóa toàn bộ tên!"); 
+    if(typeof showToast==='function') showToast(t('toast_names_cleared')); 
 }
 
 function changeReadStatus(val) { 
@@ -993,10 +1123,10 @@ function updateSearchTypeUI() {
     const btn = document.getElementById('btn-search-type');
     if (!btn) return;
     if (searchType === 'manga') {
-        btn.innerHTML = '<i class="ph ph-book-open"></i> Search: Manga';
+        btn.innerHTML = `<i class="ph ph-book-open"></i> ${t('search_manga')}`;
         btn.style.color = 'var(--accent)';
     } else {
-        btn.innerHTML = '<i class="ph ph-television"></i> Search: Anime';
+        btn.innerHTML = `<i class="ph ph-television"></i> ${t('search_anime')}`;
         btn.style.color = 'var(--warning)';
     }
 }
@@ -1011,7 +1141,7 @@ function toggleSearchType(e) {
 function searchAnime(site) {
     if (!selectedImgObj) return;
     let currentRawName = selectedImgObj.dom.getAttribute('data-raw-name') || '';
-    if (!currentRawName) { if(typeof showToast==='function') showToast("Không có tên để tìm kiếm!", true); return; }
+    if (!currentRawName) { if(typeof showToast==='function') showToast(t('toast_no_name'), true); return; }
     
     const q = encodeURIComponent(currentRawName);
     let url = '';
@@ -1061,6 +1191,17 @@ function applyScoreMove(score) {
         return;
     }
 
+    if (isLockScoreMode && selectedImgObj.type === 'tier' && targetIndex !== selectedImgObj.r) {
+        selectedImgObj.data.score = parsedScore;
+        selectedImgObj.dom.setAttribute('data-score', parsedScore.toFixed(p));
+        const scoreBadge = selectedImgObj.dom.querySelector('.score-badge');
+        if (scoreBadge) scoreBadge.innerHTML = `<i class="ph-fill ph-star"></i> ${parsedScore.toFixed(p)}`;
+        
+        if(typeof showToast === 'function') showToast(`${currentLang==='vi'?'Đã cập nhật điểm:':'Score updated:'} ${parsedScore}`); 
+        deselectImg(); commitChangeSilent();
+        return;
+    }
+
     let sourceArray = (selectedImgObj.type === 'tier') ? currentListData.tiers[selectedImgObj.r].items : currentListData.dock;
     let oldIdx = sourceArray.indexOf(selectedImgObj.data);
     if(oldIdx !== -1) sourceArray.splice(oldIdx, 1);
@@ -1069,7 +1210,7 @@ function applyScoreMove(score) {
     currentListData.tiers[targetIndex].items.push(selectedImgObj.data);
     currentListData.tiers[targetIndex].items.sort((a, b) => (b.score !== undefined ? b.score : -1) - (a.score !== undefined ? a.score : -1));
 
-    if(typeof showToast === 'function') showToast(`Đã chuyển sang ${currentListData.tiers[targetIndex].name}`); 
+    if(typeof showToast === 'function') showToast(`${currentLang==='vi'?'Đã chuyển sang':'Moved to'} ${currentListData.tiers[targetIndex].name}`); 
     deselectImg(); commitChange(); 
 }
 
@@ -1079,7 +1220,12 @@ function deleteSelected() {
     if(oldIdx !== -1) oldArray.splice(oldIdx, 1);
     commitChange(); deselectImg(); 
 }
+
 function moveToDock() { 
+    if (isLockScoreMode) {
+        if(typeof showToast === 'function') showToast(t('toast_locked'), true);
+        return;
+    }
     let oldArray = (selectedImgObj.type === 'tier') ? currentListData.tiers[selectedImgObj.r].items : currentListData.dock; 
     let oldIdx = oldArray.indexOf(selectedImgObj.data);
     if(oldIdx !== -1) oldArray.splice(oldIdx, 1); 
@@ -1088,6 +1234,10 @@ function moveToDock() {
 }
 
 function sortTierItems(type) {
+    if (isLockScoreMode) {
+        if(typeof showToast === 'function') showToast(t('toast_locked_arrange'), true);
+        return;
+    }
     if(typeof openConfirm === 'function') {
         openConfirm("Auto Arrange", `Sắp xếp ảnh theo ${type.toUpperCase()}?`, () => {
             currentListData.tiers.forEach(t => {
@@ -1100,7 +1250,7 @@ function sortTierItems(type) {
                     return 0;
                 });
             });
-            commitChange(); if(typeof showToast === 'function') showToast("Đã tự động sắp xếp!");
+            commitChange(); if(typeof showToast === 'function') showToast(currentLang==='vi'?"Đã tự động sắp xếp!":"Auto arranged!");
         });
     }
 }
